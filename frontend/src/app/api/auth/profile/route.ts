@@ -45,7 +45,11 @@ export async function PUT(req: NextRequest) {
             .select('*') // Fetch all fields after update
             .single();
 
-        if (error) return jsonError('Erro ao atualizar perfil');
+        if (error) {
+            console.error('Supabase profile update error:', error);
+            return jsonError(`Erro ao atualizar perfil: ${error.message}`);
+        }
+
 
         // Sync with Pagar.me if bank details are provided
         if (body.bank_name && body.bank_agency && body.bank_account) {

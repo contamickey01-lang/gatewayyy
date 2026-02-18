@@ -23,7 +23,9 @@ CREATE TABLE IF NOT EXISTS users (
   bank_name VARCHAR(100),
   bank_agency VARCHAR(10),
   bank_account VARCHAR(20),
+  bank_account_digit VARCHAR(2),
   bank_account_type VARCHAR(20), -- checking, savings
+
   role VARCHAR(20) DEFAULT 'seller', -- seller, admin
   status VARCHAR(20) DEFAULT 'active', -- active, blocked, pending
   email_verified BOOLEAN DEFAULT FALSE,

@@ -20,7 +20,8 @@ class PagarmeService {
                     branch_number: seller.bank_agency || '0001',
                     branch_check_digit: '0',
                     account_number: seller.bank_account || '00000',
-                    account_check_digit: '0',
+                    account_check_digit: seller.bank_account_digit || '0',
+
                     type: seller.bank_account_type || 'checking'
                 },
                 transfer_settings: {
