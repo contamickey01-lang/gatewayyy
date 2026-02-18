@@ -243,9 +243,14 @@ class AuthController {
             const updates = {};
             allowedFields.forEach(field => {
                 if (req.body[field] !== undefined) {
-                    updates[field] = req.body[field];
+                    if (field === 'cpf_cnpj' && req.body[field] === '') {
+                        updates[field] = null;
+                    } else {
+                        updates[field] = req.body[field];
+                    }
                 }
             });
+
             updates.updated_at = new Date().toISOString();
 
             const { data, error } = await supabase

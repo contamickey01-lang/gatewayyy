@@ -35,8 +35,16 @@ export async function PUT(req: NextRequest) {
 
         const updateData: any = {};
         for (const field of allowedFields) {
-            if (body[field] !== undefined) updateData[field] = body[field];
+            if (body[field] !== undefined) {
+                // If the field is empty string and is cpf_cnpj, set to null to avoid unique constraint issues
+                if (field === 'cpf_cnpj' && body[field] === '') {
+                    updateData[field] = null;
+                } else {
+                    updateData[field] = body[field];
+                }
+            }
         }
+
 
         const { data: user, error } = await supabase
             .from('users')
