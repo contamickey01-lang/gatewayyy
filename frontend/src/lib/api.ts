@@ -1,0 +1,82 @@
+import axios from 'axios';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
+
+const api = axios.create({
+    baseURL: API_URL,
+    headers: { 'Content-Type': 'application/json' },
+});
+
+api.interceptors.request.use((config) => {
+    if (typeof window !== 'undefined') {
+        const token = localStorage.getItem('token');
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+    }
+    return config;
+});
+
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response?.status === 401 && typeof window !== 'undefined') {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            if (!window.location.pathname.includes('/login')) {
+                window.location.href = '/login';
+            }
+        }
+        return Promise.reject(error);
+    }
+);
+
+// Auth
+export const authAPI = {
+    register: (data: any) => api.post('/auth/register', data),
+    login: (data: any) => api.post('/auth/login', data),
+    forgotPassword: (email: string) => api.post('/auth/forgot-password', { email }),
+    resetPassword: (data: any) => api.post('/auth/reset-password', data),
+    getProfile: () => api.get('/auth/profile'),
+    updateProfile: (data: any) => api.put('/auth/profile', data),
+};
+
+// Products
+export const productsAPI = {
+    list: (params?: any) => api.get('/products', { params }),
+    getById: (id: string) => api.get(`/products/${id}`),
+    getPublic: (id: string) => api.get(`/products/public/${id}`),
+    create: (data: any) => api.post('/products', data),
+    update: (id: string, data: any) => api.put(`/products/${id}`, data),
+    delete: (id: string) => api.delete(`/products/${id}`),
+};
+
+// Dashboard
+export const dashboardAPI = {
+    getStats: () => api.get('/dashboard/stats'),
+};
+
+// Checkout
+export const checkoutAPI = {
+    pay: (data: any) => api.post('/checkout/pay', data),
+    getOrderStatus: (id: string) => api.get(`/checkout/order/${id}`),
+};
+
+// Withdrawals
+export const withdrawalsAPI = {
+    request: (amount: number) => api.post('/withdrawals', { amount }),
+    list: (params?: any) => api.get('/withdrawals', { params }),
+    getBalance: () => api.get('/withdrawals/balance'),
+};
+
+// Admin
+export const adminAPI = {
+    getDashboard: () => api.get('/admin/dashboard'),
+    listSellers: (params?: any) => api.get('/admin/sellers', { params }),
+    toggleBlock: (id: string, blocked: boolean) => api.put(`/admin/sellers/${id}/block`, { blocked }),
+    listTransactions: (params?: any) => api.get('/admin/transactions', { params }),
+    getSettings: () => api.get('/admin/settings'),
+    updateFees: (fee_percentage: number) => api.put('/admin/settings/fees', { fee_percentage }),
+};
+
+export default api;

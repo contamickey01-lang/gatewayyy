@@ -1,0 +1,306 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { productsAPI } from '@/lib/api';
+import toast from 'react-hot-toast';
+import { FiPlus, FiEdit2, FiTrash2, FiCopy, FiPackage, FiX, FiUpload, FiImage } from 'react-icons/fi';
+import axios from 'axios';
+
+export default function ProductsPage() {
+    const [products, setProducts] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [showModal, setShowModal] = useState(false);
+    const [editing, setEditing] = useState<any>(null);
+    const [form, setForm] = useState({
+        name: '', description: '', price: '', image_url: '', type: 'digital', status: 'active'
+    });
+    const [uploading, setUploading] = useState(false);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+    useEffect(() => { loadProducts(); }, []);
+
+    const loadProducts = async () => {
+        try {
+            const { data } = await productsAPI.list();
+            setProducts(data.products || []);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const openCreate = () => {
+        setEditing(null);
+        setForm({ name: '', description: '', price: '', image_url: '', type: 'digital', status: 'active' });
+        setSelectedFile(null);
+        setImagePreview(null);
+        setShowModal(true);
+    };
+
+    const openEdit = (product: any) => {
+        setEditing(product);
+        setForm({
+            name: product.name,
+            description: product.description || '',
+            price: product.price_display || (product.price / 100).toFixed(2),
+            image_url: product.image_url || '',
+            type: product.type,
+            status: product.status
+        });
+        setSelectedFile(null);
+        setImagePreview(product.image_url || null);
+        setShowModal(true);
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setSelectedFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImagePreview(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setUploading(true);
+        try {
+            let finalImageUrl = form.image_url;
+
+            // Handle image upload if a file is selected
+            if (selectedFile) {
+                const formData = new FormData();
+                formData.append('file', selectedFile);
+
+                const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+                const { data } = await axios.post('/api/upload', formData, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                finalImageUrl = data.url;
+            }
+
+            const productData = {
+                ...form,
+                image_url: finalImageUrl,
+                price: parseFloat(form.price)
+            };
+
+            if (editing) {
+                await productsAPI.update(editing.id, productData);
+                toast.success('Produto atualizado!');
+            } else {
+                await productsAPI.create(productData);
+                toast.success('Produto criado!');
+            }
+            setShowModal(false);
+            loadProducts();
+        } catch (err: any) {
+            toast.error(err.response?.data?.error || 'Erro ao salvar produto');
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const handleDelete = async (id: string) => {
+        if (!confirm('Tem certeza que deseja excluir este produto?')) return;
+        try {
+            await productsAPI.delete(id);
+            toast.success('Produto excluído!');
+            loadProducts();
+        } catch (err: any) {
+            toast.error(err.response?.data?.error || 'Erro ao excluir');
+        }
+    };
+
+    const copyCheckoutLink = (id: string) => {
+        const url = `${window.location.origin}/checkout/${id}`;
+        navigator.clipboard.writeText(url);
+        toast.success('Link copiado!');
+    };
+
+    const update = (field: string, value: string) => setForm({ ...form, [field]: value });
+
+    if (loading) {
+        return (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300 }}>
+                <div style={{ width: 36, height: 36, border: '3px solid var(--border-color)', borderTopColor: 'var(--accent-primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                <style jsx>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            </div>
+        );
+    }
+
+    return (
+        <div className="animate-fade-in">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
+                <div>
+                    <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 4 }}>Produtos</h1>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>{products.length} produtos cadastrados</p>
+                </div>
+                <button className="btn-primary" onClick={openCreate} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <FiPlus size={16} /> Novo Produto
+                </button>
+            </div>
+
+            {products.length > 0 ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 20 }}>
+                    {products.map((product) => (
+                        <div key={product.id} className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
+                            {/* Image */}
+                            <div style={{
+                                height: 160, background: 'linear-gradient(135deg, rgba(108,92,231,0.15) 0%, rgba(162,155,254,0.08) 100%)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative'
+                            }}>
+                                {product.image_url ? (
+                                    <img src={product.image_url} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : (
+                                    <FiPackage size={40} style={{ color: 'var(--accent-secondary)', opacity: 0.5 }} />
+                                )}
+                                <span className={`badge ${product.status === 'active' ? 'badge-success' : 'badge-neutral'}`}
+                                    style={{ position: 'absolute', top: 12, right: 12 }}>
+                                    {product.status === 'active' ? 'Ativo' : 'Inativo'}
+                                </span>
+                            </div>
+
+                            <div style={{ padding: 20 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                                    <h3 style={{ fontSize: 16, fontWeight: 600, flex: 1 }}>{product.name}</h3>
+                                    <span className={`badge ${product.type === 'digital' ? 'badge-info' : 'badge-warning'}`} style={{ fontSize: 10, flexShrink: 0 }}>
+                                        {product.type === 'digital' ? 'Digital' : 'Físico'}
+                                    </span>
+                                </div>
+                                <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginBottom: 16, lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                    {product.description || 'Sem descrição'}
+                                </p>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontSize: 22, fontWeight: 700 }} className="gradient-text">
+                                        R$ {product.price_display || (product.price / 100).toFixed(2)}
+                                    </span>
+                                    <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{product.sales_count || 0} vendas</span>
+                                </div>
+                                <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+                                    <button onClick={() => copyCheckoutLink(product.id)} className="btn-secondary" style={{ flex: 1, padding: '8px 12px', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                                        <FiCopy size={13} /> Link Checkout
+                                    </button>
+                                    <button onClick={() => openEdit(product)} className="btn-secondary" style={{ padding: '8px 12px' }}>
+                                        <FiEdit2 size={14} />
+                                    </button>
+                                    <button onClick={() => handleDelete(product.id)} className="btn-danger" style={{ padding: '8px 12px' }}>
+                                        <FiTrash2 size={14} />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <div className="glass-card" style={{ textAlign: 'center', padding: '60px 24px' }}>
+                    <FiPackage size={48} style={{ opacity: 0.3, marginBottom: 16 }} />
+                    <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>Nenhum produto cadastrado</h3>
+                    <p style={{ color: 'var(--text-secondary)', marginBottom: 24, fontSize: 14 }}>Crie seu primeiro produto para começar a vender</p>
+                    <button className="btn-primary" onClick={openCreate} style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                        <FiPlus size={16} /> Criar Produto
+                    </button>
+                </div>
+            )}
+
+            {/* Modal */}
+            {showModal && (
+                <div style={{
+                    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)',
+                    display: 'grid', placeItems: 'center', zIndex: 100, padding: '40px 24px', overflowY: 'auto'
+                }}>
+                    <div className="glass-card animate-fade-in" style={{
+                        width: '100%', maxWidth: 520, padding: 32,
+                        maxHeight: '100%', overflowY: 'auto'
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                            <h2 style={{ fontSize: 20, fontWeight: 700 }}>{editing ? 'Editar Produto' : 'Novo Produto'}</h2>
+                            <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                                <FiX size={20} />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleSubmit}>
+                            <div style={{ marginBottom: 16 }}>
+                                <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 6 }}>Nome do produto</label>
+                                <input type="text" className="input-field" placeholder="Ex: Curso de Marketing Digital" required
+                                    value={form.name} onChange={e => update('name', e.target.value)} />
+                            </div>
+                            <div style={{ marginBottom: 16 }}>
+                                <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 6 }}>Descrição</label>
+                                <textarea className="input-field" placeholder="Descreva seu produto..." rows={3}
+                                    value={form.description} onChange={e => update('description', e.target.value)}
+                                    style={{ resize: 'vertical' }} />
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 6 }}>Preço (R$)</label>
+                                    <input type="number" step="0.01" min="0.01" className="input-field" placeholder="99.90" required
+                                        value={form.price} onChange={e => update('price', e.target.value)} />
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 6 }}>Tipo</label>
+                                    <select className="input-field" value={form.type} onChange={e => update('type', e.target.value)}>
+                                        <option value="digital">Digital</option>
+                                        <option value="physical">Físico</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div style={{ marginBottom: 16 }}>
+                                <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 6 }}>Imagem do produto</label>
+                                <div style={{
+                                    border: '2px dashed var(--border-color)',
+                                    borderRadius: 12,
+                                    padding: 20,
+                                    textAlign: 'center',
+                                    position: 'relative',
+                                    cursor: 'pointer',
+                                    transition: 'border-color 0.2s',
+                                    overflow: 'hidden',
+                                    height: 120,
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }} onClick={() => document.getElementById('fileInput')?.click()}>
+                                    {imagePreview ? (
+                                        <img src={imagePreview} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.3 }} alt="Preview" />
+                                    ) : null}
+
+                                    <div style={{ position: 'relative', zIndex: 1 }}>
+                                        <FiUpload size={24} style={{ marginBottom: 8, color: 'var(--accent-secondary)' }} />
+                                        <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                                            {selectedFile ? selectedFile.name : 'Clique para subir uma imagem'}
+                                        </p>
+                                    </div>
+                                    <input id="fileInput" type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
+                                </div>
+                            </div>
+                            <div style={{ marginBottom: 24 }}>
+                                <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 6 }}>Status</label>
+                                <select className="input-field" value={form.status} onChange={e => update('status', e.target.value)}>
+                                    <option value="active">Ativo</option>
+                                    <option value="inactive">Inativo</option>
+                                </select>
+                            </div>
+                            <div style={{ display: 'flex', gap: 12 }}>
+                                <button type="button" className="btn-secondary" onClick={() => setShowModal(false)} style={{ flex: 1 }} disabled={uploading}>Cancelar</button>
+                                <button type="submit" className="btn-primary" style={{ flex: 1 }} disabled={uploading}>
+                                    {uploading ? 'Salvando...' : (editing ? 'Salvar' : 'Criar Produto')}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
