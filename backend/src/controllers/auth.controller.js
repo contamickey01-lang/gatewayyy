@@ -243,13 +243,15 @@ class AuthController {
             const updates = {};
             allowedFields.forEach(field => {
                 if (req.body[field] !== undefined) {
-                    if (field === 'cpf_cnpj' && req.body[field] === '') {
-                        updates[field] = null;
+                    if (field === 'cpf_cnpj') {
+                        const value = typeof req.body[field] === 'string' ? req.body[field].trim() : req.body[field];
+                        updates[field] = value === '' ? null : value;
                     } else {
                         updates[field] = req.body[field];
                     }
                 }
             });
+
 
             updates.updated_at = new Date().toISOString();
 
