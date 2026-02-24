@@ -75,7 +75,11 @@ export async function POST(req: NextRequest) {
         return jsonSuccess(response, 201);
     } catch (err: any) {
         const errorData = err.response?.data || err.message;
-        console.error('Checkout error detail:', JSON.stringify(errorData, null, 2));
+        console.error('Checkout error details:', JSON.stringify({
+            error: errorData,
+            stack: err.stack,
+            request: err.config?.data ? JSON.parse(err.config.data) : 'N/A'
+        }, null, 2));
 
         // Return a more descriptive error if it's a Pagar.me validation error
         const message = errorData.message || errorData.errors?.[0]?.message || 'Erro ao processar pagamento';

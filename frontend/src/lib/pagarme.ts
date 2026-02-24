@@ -63,8 +63,26 @@ export class PagarmeService {
         // Only add split rules if the recipient IDs are real (not re_test_...)
         if (data.seller_recipient_id && !data.seller_recipient_id.startsWith('re_test_') && platformRecipientId) {
             payment.split = [
-                { amount: Math.round(data.amount * sellerPercentage / 100), recipient_id: data.seller_recipient_id, type: 'flat', options: { charge_processing_fee: false, charge_remainder_fee: false } },
-                { amount: Math.round(data.amount * data.platform_fee_percentage / 100), recipient_id: platformRecipientId, type: 'flat', options: { charge_processing_fee: true, charge_remainder_fee: true } }
+                {
+                    amount: sellerPercentage,
+                    recipient_id: data.seller_recipient_id,
+                    type: 'percentage',
+                    options: {
+                        charge_processing_fee: true,
+                        charge_remainder_fee: true,
+                        liable: true
+                    }
+                },
+                {
+                    amount: data.platform_fee_percentage,
+                    recipient_id: platformRecipientId,
+                    type: 'percentage',
+                    options: {
+                        charge_processing_fee: false,
+                        charge_remainder_fee: false,
+                        liable: false
+                    }
+                }
             ];
         }
 
