@@ -79,7 +79,7 @@ export default function DashboardPage() {
     const statCards = [
         { label: 'Saldo Disponível', value: stats?.stats?.available_balance || '0.00', icon: <FiDollarSign size={20} />, color: '#00cec9' },
         { label: 'Total Vendido', value: stats?.stats?.total_sold || '0.00', icon: <FiTrendingUp size={20} />, color: '#6c5ce7' },
-        { label: 'Saldo Pendente', value: stats?.stats?.pending_balance || '0.00', icon: <FiShoppingCart size={20} />, color: '#fdcb6e' },
+        { label: 'A Receber', value: stats?.stats?.pending_balance || '0.00', icon: <FiShoppingCart size={20} />, color: '#fdcb6e' },
         { label: 'Total Sacado', value: stats?.stats?.total_withdrawn || '0.00', icon: <FiArrowDown size={20} />, color: '#74b9ff' },
         { label: 'Taxas Pagas', value: stats?.stats?.total_fees || '0.00', icon: <FiPercent size={20} />, color: '#ff6b6b' },
         { label: 'Produtos', value: stats?.stats?.total_products || 0, icon: <FiPackage size={20} />, color: '#a29bfe', isCurrency: false },
@@ -170,8 +170,8 @@ export default function DashboardPage() {
                                         </td>
                                         <td>
                                             <span className={`badge ${order.status === 'paid' ? 'badge-success' :
-                                                    order.status === 'pending' ? 'badge-warning' :
-                                                        order.status === 'failed' ? 'badge-danger' : 'badge-neutral'
+                                                order.status === 'pending' ? 'badge-warning' :
+                                                    order.status === 'failed' ? 'badge-danger' : 'badge-neutral'
                                                 }`}>
                                                 {order.status === 'paid' ? 'Pago' :
                                                     order.status === 'pending' ? 'Pendente' :
