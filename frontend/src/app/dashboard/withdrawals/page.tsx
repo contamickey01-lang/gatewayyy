@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { withdrawalsAPI } from '@/lib/api';
 import toast from 'react-hot-toast';
-import { FiDollarSign, FiArrowDown, FiClock, FiCheckCircle, FiXCircle } from 'react-icons/fi';
+import { FiDollarSign, FiArrowDown, FiClock, FiCheckCircle, FiXCircle, FiInfo } from 'react-icons/fi';
 
 export default function WithdrawalsPage() {
     const [balance, setBalance] = useState<any>(null);
@@ -33,7 +33,7 @@ export default function WithdrawalsPage() {
 
     const handleWithdraw = async () => {
         const value = parseFloat(amount);
-        if (!value || value <= 0) return toast.error('Informe um valor válido');
+        if (!value || value < 5) return toast.error('O valor mínimo para saque é R$ 5,00');
         if (value > parseFloat(balance?.available || '0')) return toast.error('Saldo insuficiente');
 
         setRequesting(true);
@@ -92,10 +92,10 @@ export default function WithdrawalsPage() {
             {/* Withdraw Form */}
             <div className="glass-card" style={{ padding: 28, marginBottom: 32 }}>
                 <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 20 }}>Solicitar Saque via Pix</h3>
-                <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: 20 }}>
                     <div style={{ flex: 1, minWidth: 200 }}>
                         <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 6 }}>Valor (R$)</label>
-                        <input type="number" step="0.01" min="1" className="input-field" placeholder="0.00"
+                        <input type="number" step="0.01" min="5" className="input-field" placeholder="0.00"
                             value={amount} onChange={e => setAmount(e.target.value)} />
                     </div>
                     <button className="btn-primary" onClick={handleWithdraw} disabled={requesting}
@@ -104,9 +104,20 @@ export default function WithdrawalsPage() {
                         {requesting ? 'Processando...' : 'Solicitar Saque'}
                     </button>
                 </div>
-                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 12 }}>
-                    O valor será transferido para a chave Pix cadastrada no seu perfil.
-                </p>
+
+                <div style={{
+                    display: 'flex', flexDirection: 'column', gap: 8, padding: 16,
+                    background: 'rgba(255,107,107,0.06)', borderRadius: 12, border: '1px solid rgba(255,107,107,0.1)'
+                }}>
+                    <p style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <FiInfo size={16} color="#ff6b6b" /> Informações Importantes:
+                    </p>
+                    <ul style={{ margin: 0, paddingLeft: 20, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                        <li>O valor mínimo para saque é de <strong>R$ 5,00</strong>.</li>
+                        <li>Cada transferência possui uma taxa de <strong>R$ 3,67</strong> (cobrada pelo Pagar.me).</li>
+                        <li>O valor será transferido para a chave Pix cadastrada no seu perfil.</li>
+                    </ul>
+                </div>
             </div>
 
             {/* Withdrawal History */}
