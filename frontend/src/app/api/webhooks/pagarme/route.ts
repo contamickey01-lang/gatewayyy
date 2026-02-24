@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
             // Create fee transaction
             await supabase.from('transactions').insert({
                 id: uuidv4(),
-                user_id: order.user_id,
+                user_id: order.seller_id,
                 order_id: order.id,
                 type: 'fee',
                 amount: feeAmount,
@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
         // Create refund transaction if needed
         if (transactionType === 'refund') {
             await supabase.from('transactions').insert({
-                id: uuidv4(), user_id: order.user_id, order_id: order.id,
+                id: uuidv4(), user_id: order.seller_id, order_id: order.id,
                 type: 'refund', amount: order.amount, amount_display: order.amount_display,
                 status: 'confirmed', description: `Estorno do pedido ${order.id}`
             });

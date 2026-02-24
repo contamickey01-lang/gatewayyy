@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
 
                 // Also fetch total sold from orders for reference (not provided by balance API directly)
                 const { data: orders } = await supabase
-                    .from('orders').select('amount').eq('user_id', auth.user.id).eq('status', 'paid');
+                    .from('orders').select('amount').eq('seller_id', auth.user.id).eq('status', 'paid');
                 const totalSold = (orders || []).reduce((sum, o) => sum + (o.amount || 0), 0);
 
                 return jsonSuccess({

@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
 
             // Fetch total sold from orders (Pagar.me balance doesn't show history)
             const { data: salesData, error: salesError } = await supabase
-                .from('orders').select('amount').eq('user_id', userId).eq('status', 'paid');
+                .from('orders').select('amount').eq('seller_id', userId).eq('status', 'paid');
 
             if (salesError) console.error('Sales query error:', salesError);
             totalSoldDec = (salesData || []).reduce((s, t) => s + (t.amount || 0), 0) / 100;
@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
     // Monthly sales
     const { data: monthlySales } = await supabase
         .from('orders').select('amount, created_at')
-        .eq('user_id', userId).eq('status', 'paid')
+        .eq('seller_id', userId).eq('status', 'paid')
         .order('created_at', { ascending: true });
 
     const monthlyMap: Record<string, number> = {};
@@ -95,7 +95,7 @@ export async function GET(req: NextRequest) {
     // Recent orders
     const { data: recent_orders } = await supabase
         .from('orders').select('id, buyer_name, amount_display, payment_method, status, created_at, products(name)')
-        .eq('user_id', userId).order('created_at', { ascending: false }).limit(10);
+        .eq('seller_id', userId).order('created_at', { ascending: false }).limit(10);
 
     return jsonSuccess({
         stats: {
