@@ -73,7 +73,7 @@ export default function WithdrawalsPage() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 16, marginBottom: 32 }}>
                 {[
                     { label: 'Saldo Disponível', value: balance?.available || '0.00', color: '#00cec9', icon: <FiDollarSign size={20} /> },
-                    { label: 'Saldo Pendente', value: balance?.pending || '0.00', color: '#fdcb6e', icon: <FiClock size={20} /> },
+                    { label: 'A Receber', value: balance?.pending || '0.00', color: '#fdcb6e', icon: <FiClock size={20} /> },
                     { label: 'Total Vendido', value: balance?.total_sold || '0.00', color: '#6c5ce7', icon: <FiArrowDown size={20} /> },
                     { label: 'Total Sacado', value: balance?.total_withdrawn || '0.00', color: '#74b9ff', icon: <FiCheckCircle size={20} /> },
                 ].map((card, i) => (
