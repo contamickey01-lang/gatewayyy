@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
 
         if (newStatus === 'paid') {
             // Get platform fee percentage
-            const feePercentage = parseFloat(process.env.PLATFORM_FEE_PERCENTAGE || '15');
+            const feePercentage = parseFloat(process.env.PLATFORM_FEE_PERCENTAGE || '3');
             const feeAmount = Math.round(order.amount * (feePercentage / 100));
             const sellerAmount = order.amount - feeAmount;
 

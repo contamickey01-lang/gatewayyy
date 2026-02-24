@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
 
         if (!recipient) return jsonError('Vendedor não configurado para receber', 400);
 
-        const feePercentage = parseFloat(process.env.PLATFORM_FEE_PERCENTAGE || '15');
+        const feePercentage = parseFloat(process.env.PLATFORM_FEE_PERCENTAGE || '3');
 
         // Create Pagar.me order
         const order = await PagarmeService.createOrder({
