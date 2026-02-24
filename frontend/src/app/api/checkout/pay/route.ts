@@ -60,6 +60,22 @@ export async function POST(req: NextRequest) {
             description: `Venda: ${product.name}`
         });
 
+        // If paid immediately, create fee transaction and update sales count
+        if (charge?.status === 'paid') {
+            const feeAmount = Math.round(product.price * (feePercentage / 100));
+
+            await supabase.from('transactions').insert({
+                id: uuidv4(), user_id: product.user_id, order_id: orderId,
+                type: 'fee', amount: feeAmount,
+                status: 'confirmed',
+                description: `Taxa de plataforma (${feePercentage}%) - Pedido ${orderId}`
+            });
+
+            await supabase.from('products')
+                .update({ sales_count: (product.sales_count || 0) + 1 })
+                .eq('id', product.id);
+        }
+
         // Build response
         const response: any = {
             order: { id: orderId, status: charge?.status || 'pending', amount_display: product.price_display }

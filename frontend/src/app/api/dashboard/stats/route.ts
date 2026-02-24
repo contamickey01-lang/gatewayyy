@@ -15,10 +15,10 @@ export async function GET(req: NextRequest) {
         .from('transactions').select('amount').eq('user_id', userId).eq('type', 'sale').eq('status', 'confirmed');
 
     const { data: fees } = await supabase
-        .from('transactions').select('amount').eq('user_id', userId).eq('type', 'fee');
+        .from('transactions').select('amount').eq('user_id', userId).eq('type', 'fee').eq('status', 'confirmed');
 
     const { data: withdrawals } = await supabase
-        .from('transactions').select('amount').eq('user_id', userId).eq('type', 'withdrawal');
+        .from('transactions').select('amount').eq('user_id', userId).eq('type', 'withdrawal').eq('status', 'confirmed');
 
     const { data: pending } = await supabase
         .from('transactions').select('amount').eq('user_id', userId).eq('type', 'sale').eq('status', 'pending');
@@ -30,6 +30,8 @@ export async function GET(req: NextRequest) {
     const totalFees = (fees || []).reduce((s, t) => s + (t.amount || 0), 0);
     const totalWithdrawn = (withdrawals || []).reduce((s, t) => s + (t.amount || 0), 0);
     const pendingBalance = (pending || []).reduce((s, t) => s + (t.amount || 0), 0);
+
+    // Available balance is confirmed sales minus confirmed fees minus confirmed withdrawals
     const available = totalSold - totalFees - totalWithdrawn;
 
     // Monthly sales

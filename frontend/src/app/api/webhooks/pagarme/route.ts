@@ -44,12 +44,55 @@ export async function POST(req: NextRequest) {
         }
 
         // Update order status
+        if (order.status === 'paid' && newStatus === 'paid') {
+            return jsonSuccess({ received: true }); // Already processed
+        }
+
         await supabase.from('orders').update({ status: newStatus }).eq('id', order.id);
 
-        // Update transaction
-        await supabase.from('transactions')
-            .update({ status: newStatus === 'paid' ? 'confirmed' : newStatus })
-            .eq('order_id', order.id).eq('type', 'sale');
+        if (newStatus === 'paid') {
+            // Get platform fee percentage
+            const feePercentage = parseFloat(process.env.PLATFORM_FEE_PERCENTAGE || '15');
+            const feeAmount = Math.round(order.amount * (feePercentage / 100));
+            const sellerAmount = order.amount - feeAmount;
+
+            // Update original 'sale' transaction to confirmed and adjust to net amount
+            // Or keep it as full amount and create a separate 'fee' transaction (matches frontend stats logic)
+            await supabase.from('transactions')
+                .update({ status: 'confirmed' })
+                .eq('order_id', order.id).eq('type', 'sale');
+
+            // Create fee transaction
+            await supabase.from('transactions').insert({
+                id: uuidv4(),
+                user_id: order.user_id,
+                order_id: order.id,
+                type: 'fee',
+                amount: feeAmount,
+                status: 'confirmed',
+                description: `Taxa de plataforma (${feePercentage}%) - Pedido ${order.id}`
+            });
+
+            // Update product sales count
+            if (order.product_id) {
+                const { data: product } = await supabase
+                    .from('products')
+                    .select('sales_count')
+                    .eq('id', order.product_id)
+                    .single();
+
+                if (product) {
+                    await supabase.from('products')
+                        .update({ sales_count: (product.sales_count || 0) + 1 })
+                        .eq('id', order.product_id);
+                }
+            }
+        } else {
+            // For other statuses (failed, etc.)
+            await supabase.from('transactions')
+                .update({ status: newStatus === 'failed' ? 'failed' : newStatus })
+                .eq('order_id', order.id).eq('type', 'sale');
+        }
 
         // Create refund transaction if needed
         if (transactionType === 'refund') {
