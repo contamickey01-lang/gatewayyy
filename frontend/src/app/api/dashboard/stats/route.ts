@@ -29,22 +29,36 @@ export async function GET(req: NextRequest) {
     if (recipient?.pagarme_recipient_id) {
         try {
             const balance = await PagarmeService.getRecipientBalance(recipient.pagarme_recipient_id);
-            availableDec = (balance.available?.amount || 0) / 100;
-            pendingDec = (balance.waiting_funds?.amount || 0) / 100;
-            totalWithdrawnDec = (balance.transferred?.amount || 0) / 100;
+            console.log(`Balance for recipient ${recipient.pagarme_recipient_id}:`, JSON.stringify(balance, null, 2));
+
+            // Helper to get amount regardless of structure (array or object)
+            const getAmount = (field: any) => {
+                if (!field) return 0;
+                if (Array.isArray(field)) return field[0]?.amount || 0;
+                return field.amount || 0;
+            };
+
+            availableDec = getAmount(balance.available) / 100;
+            pendingDec = getAmount(balance.waiting_funds) / 100;
+            totalWithdrawnDec = getAmount(balance.transferred) / 100;
 
             // Fetch total sold from orders (Pagar.me balance doesn't show history)
-            const { data: salesData } = await supabase
+            const { data: salesData, error: salesError } = await supabase
                 .from('orders').select('amount').eq('user_id', userId).eq('status', 'paid');
+
+            if (salesError) console.error('Sales query error:', salesError);
             totalSoldDec = (salesData || []).reduce((s, t) => s + (t.amount || 0), 0) / 100;
+
+            console.log(`Calculated stats for ${userId}: sold=${totalSoldDec}, available=${availableDec}, pending=${pendingDec}`);
             usedPagarme = true;
-        } catch (pErr) {
-            console.error('Pagar.me balance fallback in dashboard:', pErr);
+        } catch (pErr: any) {
+            console.error('Pagar.me balance error in dashboard:', pErr.response?.data || pErr.message);
         }
     }
 
     // Fallback if Pagar.me failed or not setup
     if (!usedPagarme) {
+        console.log(`Falling back to local calculation for user ${userId}`);
         const { data: sales } = await supabase
             .from('transactions').select('amount').eq('user_id', userId).eq('type', 'sale').eq('status', 'confirmed');
         const { data: fees } = await supabase

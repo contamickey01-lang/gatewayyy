@@ -17,11 +17,17 @@ export async function GET(req: NextRequest) {
         if (recipient?.pagarme_recipient_id) {
             try {
                 const balance = await PagarmeService.getRecipientBalance(recipient.pagarme_recipient_id);
+                console.log(`Withdrawals Balance API:`, JSON.stringify(balance, null, 2));
 
-                // Pagar.me v5 returns sub-objects for each type
-                const available = balance.available?.amount || 0;
-                const pending = balance.waiting_funds?.amount || 0;
-                const transferred = balance.transferred?.amount || 0;
+                const getAmount = (field: any) => {
+                    if (!field) return 0;
+                    if (Array.isArray(field)) return field[0]?.amount || 0;
+                    return field.amount || 0;
+                };
+
+                const available = getAmount(balance.available);
+                const pending = getAmount(balance.waiting_funds);
+                const transferred = getAmount(balance.transferred);
 
                 // Also fetch total sold from orders for reference (not provided by balance API directly)
                 const { data: orders } = await supabase
@@ -34,8 +40,8 @@ export async function GET(req: NextRequest) {
                     total_sold: (totalSold / 100).toFixed(2),
                     total_withdrawn: (transferred / 100).toFixed(2),
                 });
-            } catch (pErr) {
-                console.error('Pagar.me balance error, falling back to local calculation:', pErr);
+            } catch (pErr: any) {
+                console.error('Pagar.me balance error in withdrawals API:', pErr.response?.data || pErr.message);
                 // Fall through to local calculation
             }
         }
