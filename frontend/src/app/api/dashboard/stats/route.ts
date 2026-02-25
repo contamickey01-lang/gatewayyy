@@ -45,23 +45,25 @@ export async function GET(req: NextRequest) {
     if (recipient?.pagarme_recipient_id) {
         try {
             const balance = await PagarmeService.getRecipientBalance(recipient.pagarme_recipient_id);
+            console.log(`[STATS] Balance for ${recipient.pagarme_recipient_id}:`, JSON.stringify(balance, null, 2));
 
             const getAmount = (field: any) => {
                 if (!field) return 0;
                 if (Array.isArray(field)) {
+                    // Search for amount in array (standard v5)
                     const item = field.find((i: any) => i.amount !== undefined) || field[0];
                     return item?.amount || 0;
                 }
                 return field.amount || 0;
             };
 
-            // Use Pagar.me values AS-IS (they are already net from splits)
+            // Overlay local values with Real-time Pagar.me values
             availableDec = getAmount(balance.available) / 100;
             pendingDec = getAmount(balance.waiting_funds) / 100;
             totalWithdrawnDec = getAmount(balance.transferred) / 100;
             usedPagarme = true;
         } catch (pErr: any) {
-            console.error('Pagar.me balance error in stats:', pErr.response?.data || pErr.message);
+            console.error('[STATS] Pagar.me balance error:', pErr.response?.data || pErr.message);
         }
     }
 
