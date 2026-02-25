@@ -50,7 +50,7 @@ export default function ContactPage() {
                         background: 'rgba(255,107,107,0.15)', color: '#FF6B6B',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11
                     }}>⊙</div>
-                    Escolha uma Gerente
+                    Escolha um Gerente
                 </div>
             </div>
 
@@ -72,12 +72,12 @@ export default function ContactPage() {
                         flexShrink: 0, border: '2px solid var(--border-color)'
                     }}>
                         <img
-                            src="/manager-avatar.png"
+                            src="/manager-male.jpg"
                             alt="Gerente"
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             onError={(e) => {
                                 (e.target as HTMLImageElement).style.display = 'none';
-                                (e.target as HTMLImageElement).parentElement!.innerHTML = '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:36px">👩‍💼</div>';
+                                (e.target as HTMLImageElement).parentElement!.innerHTML = '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:36px">👨‍💼</div>';
                             }}
                         />
                     </div>
@@ -92,7 +92,7 @@ export default function ContactPage() {
                             Gerente de Contas
                         </span>
                         <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 12 }}>
-                            Amanda
+                            Lucas
                         </h2>
                         <a
                             href={whatsappUrl}
