@@ -32,6 +32,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         if (body.image_url !== undefined) updateData.image_url = body.image_url;
         if (body.type) updateData.type = body.type;
         if (body.status) updateData.status = body.status;
+        if (body.checkout_settings !== undefined) updateData.checkout_settings = body.checkout_settings;
 
         const { data: product, error } = await supabase.from('products')
             .update(updateData).eq('id', id).eq('user_id', auth.user.id).select().single();

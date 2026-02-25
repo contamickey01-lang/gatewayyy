@@ -49,6 +49,7 @@ export const productsAPI = {
     create: (data: any) => api.post('/products', data),
     update: (id: string, data: any) => api.put(`/products/${id}`, data),
     delete: (id: string) => api.delete(`/products/${id}`),
+    updateCheckoutSettings: (id: string, settings: any) => api.put(`/products/${id}`, { checkout_settings: settings }),
 };
 
 // Dashboard

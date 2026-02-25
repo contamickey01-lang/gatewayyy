@@ -4,12 +4,26 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { productsAPI, checkoutAPI } from '@/lib/api';
 import toast from 'react-hot-toast';
-import { FiShoppingCart, FiCreditCard, FiSmartphone, FiCheck, FiCopy, FiPackage, FiArrowRight } from 'react-icons/fi';
+import { FiShoppingCart, FiCreditCard, FiSmartphone, FiCheck, FiCopy, FiPackage, FiArrowRight, FiClock } from 'react-icons/fi';
+
+const DEFAULT_SETTINGS = {
+    theme: 'dark',
+    banner_url: '',
+    banner_text: '',
+    show_countdown: false,
+    countdown_minutes: 15,
+    countdown_text: 'Oferta expira em:',
+    notice_text: '',
+    notice_type: 'warning',
+    accent_color: '#6C5CE7',
+    hide_product_image: false,
+};
 
 export default function CheckoutPage() {
     const params = useParams();
     const router = useRouter();
     const [product, setProduct] = useState<any>(null);
+    const [settings, setSettings] = useState(DEFAULT_SETTINGS);
     const [loading, setLoading] = useState(true);
     const [processing, setProcessing] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState('pix');
@@ -18,6 +32,8 @@ export default function CheckoutPage() {
     const pollingRef = useRef<any>(null);
     const [countdown, setCountdown] = useState(5);
     const countdownRef = useRef<any>(null);
+    const [timerSeconds, setTimerSeconds] = useState(0);
+    const timerRef = useRef<any>(null);
     const [form, setForm] = useState({
         name: '', email: '', cpf: '', phone: '',
         card_number: '', card_holder: '', card_exp_month: '', card_exp_year: '', card_cvv: '', installments: 1
@@ -28,6 +44,7 @@ export default function CheckoutPage() {
         return () => {
             if (pollingRef.current) clearInterval(pollingRef.current);
             if (countdownRef.current) clearInterval(countdownRef.current);
+            if (timerRef.current) clearInterval(timerRef.current);
         };
     }, [params.id]);
 
@@ -35,6 +52,19 @@ export default function CheckoutPage() {
         try {
             const { data } = await productsAPI.getPublic(id);
             setProduct(data.product);
+            const s = { ...DEFAULT_SETTINGS, ...(data.product.checkout_settings || {}) };
+            setSettings(s);
+            // Start countdown timer if enabled
+            if (s.show_countdown) {
+                const totalSeconds = (s.countdown_minutes || 15) * 60;
+                setTimerSeconds(totalSeconds);
+                timerRef.current = setInterval(() => {
+                    setTimerSeconds(prev => {
+                        if (prev <= 1) { clearInterval(timerRef.current); return 0; }
+                        return prev - 1;
+                    });
+                }, 1000);
+            }
         } catch (err) {
             toast.error('Produto não encontrado');
         } finally {
@@ -47,7 +77,6 @@ export default function CheckoutPage() {
             localStorage.setItem('token', authData.token);
             localStorage.setItem('user', JSON.stringify(authData.user));
         }
-        // Start countdown to redirect
         let count = 5;
         setCountdown(count);
         countdownRef.current = setInterval(() => {
@@ -68,13 +97,9 @@ export default function CheckoutPage() {
                     clearInterval(pollingRef.current);
                     setPixPaid(true);
                     toast.success('Pagamento confirmado! 🎉');
-                    if (data.auth) {
-                        autoLoginAndRedirect(data.auth);
-                    }
+                    if (data.auth) autoLoginAndRedirect(data.auth);
                 }
-            } catch (err) {
-                // Silently retry
-            }
+            } catch (err) { /* retry */ }
         }, 3000);
     };
 
@@ -83,35 +108,21 @@ export default function CheckoutPage() {
         setProcessing(true);
         try {
             const payload: any = {
-                product_id: params.id,
-                payment_method: paymentMethod,
-                buyer: {
-                    name: form.name,
-                    email: form.email,
-                    cpf: form.cpf,
-                    phone: form.phone
-                }
+                product_id: params.id, payment_method: paymentMethod,
+                buyer: { name: form.name, email: form.email, cpf: form.cpf, phone: form.phone }
             };
-
             if (paymentMethod === 'credit_card') {
                 payload.card_data = {
-                    number: form.card_number.replace(/\s/g, ''),
-                    holder_name: form.card_holder,
-                    exp_month: parseInt(form.card_exp_month),
-                    exp_year: parseInt(form.card_exp_year),
-                    cvv: form.card_cvv,
-                    installments: form.installments
+                    number: form.card_number.replace(/\s/g, ''), holder_name: form.card_holder,
+                    exp_month: parseInt(form.card_exp_month), exp_year: parseInt(form.card_exp_year),
+                    cvv: form.card_cvv, installments: form.installments
                 };
             }
-
             const { data } = await checkoutAPI.pay(payload);
             setResult(data);
-
             if (data.order?.status === 'paid') {
                 toast.success('Pagamento aprovado! 🎉');
-                if (data.auth) {
-                    autoLoginAndRedirect(data.auth);
-                }
+                if (data.auth) autoLoginAndRedirect(data.auth);
             } else if (paymentMethod === 'pix') {
                 toast.success('QR Code gerado!');
                 startPixPolling(data.order.id);
@@ -124,18 +135,37 @@ export default function CheckoutPage() {
     };
 
     const copyPixCode = () => {
-        if (result?.pix?.qr_code) {
-            navigator.clipboard.writeText(result.pix.qr_code);
-            toast.success('Código Pix copiado!');
-        }
+        if (result?.pix?.qr_code) { navigator.clipboard.writeText(result.pix.qr_code); toast.success('Código Pix copiado!'); }
+    };
+    const update = (field: string, value: string) => setForm({ ...form, [field]: value });
+
+    const formatTimer = (s: number) => {
+        const m = Math.floor(s / 60);
+        const sec = s % 60;
+        return `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
     };
 
-    const update = (field: string, value: string) => setForm({ ...form, [field]: value });
+    // Theme variables
+    const isLight = settings.theme === 'light';
+    const bgPrimary = isLight ? '#f8f9fa' : 'var(--bg-primary)';
+    const bgCard = isLight ? 'rgba(255,255,255,0.95)' : 'var(--bg-card, rgba(25,25,45,0.6))';
+    const borderColor = isLight ? 'rgba(0,0,0,0.1)' : 'var(--border-color)';
+    const textPrimary = isLight ? '#1a1a2e' : 'var(--text-primary)';
+    const textSecondary = isLight ? '#555' : 'var(--text-secondary)';
+    const textMuted = isLight ? '#888' : 'var(--text-muted)';
+    const inputBg = isLight ? '#fff' : 'var(--bg-secondary)';
+    const accent = settings.accent_color || '#6C5CE7';
+
+    const noticeColors: any = {
+        warning: { bg: 'rgba(253,203,110,0.12)', border: 'rgba(253,203,110,0.3)', text: '#FDCB6E' },
+        info: { bg: 'rgba(116,185,255,0.12)', border: 'rgba(116,185,255,0.3)', text: '#74B9FF' },
+        success: { bg: 'rgba(85,239,196,0.12)', border: 'rgba(85,239,196,0.3)', text: '#55EFC4' },
+    };
 
     if (loading) {
         return (
-            <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)' }}>
-                <div style={{ width: 40, height: 40, border: '3px solid var(--border-color)', borderTopColor: 'var(--accent-primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+            <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: bgPrimary }}>
+                <div style={{ width: 40, height: 40, border: `3px solid ${borderColor}`, borderTopColor: accent, borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
                 <style jsx>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
             </div>
         );
@@ -143,200 +173,221 @@ export default function CheckoutPage() {
 
     if (!product) {
         return (
-            <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)', padding: 24 }}>
-                <div className="glass-card" style={{ padding: 48, textAlign: 'center', maxWidth: 400 }}>
-                    <FiPackage size={48} style={{ opacity: 0.3, marginBottom: 16 }} />
-                    <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 8 }}>Produto não encontrado</h2>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>Este produto não existe ou foi desativado.</p>
+            <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: bgPrimary, padding: 24 }}>
+                <div style={{ padding: 48, textAlign: 'center', maxWidth: 400, background: bgCard, borderRadius: 16, border: `1px solid ${borderColor}` }}>
+                    <FiPackage size={48} style={{ opacity: 0.3, color: textPrimary, marginBottom: 16 }} />
+                    <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 8, color: textPrimary }}>Produto não encontrado</h2>
+                    <p style={{ color: textSecondary, fontSize: 14 }}>Este produto não existe ou foi desativado.</p>
                 </div>
             </div>
         );
     }
 
-    // Success Screen (Credit Card instant or PIX confirmed)
+    // Success Screen
     if (result && (result.order?.status === 'paid' || pixPaid)) {
         return (
-            <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)', padding: 24 }}>
-                <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: 500, padding: 48, textAlign: 'center' }}>
-                    {/* Success animation */}
+            <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: bgPrimary, padding: 24 }}>
+                <div style={{ width: '100%', maxWidth: 500, padding: 48, textAlign: 'center', background: bgCard, borderRadius: 20, border: `1px solid ${borderColor}` }}>
                     <div style={{
                         width: 80, height: 80, borderRadius: '50%', margin: '0 auto 24px',
                         background: 'rgba(0,206,201,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                         animation: 'scaleIn 0.5s ease'
                     }}>
-                        <FiCheck size={40} style={{ color: 'var(--success)' }} />
+                        <FiCheck size={40} style={{ color: '#00CEC9' }} />
                     </div>
-
-                    <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 8 }}>
-                        Pagamento <span className="gradient-text">Confirmado!</span>
+                    <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 8, color: textPrimary }}>
+                        Pagamento <span style={{ color: accent }}>Confirmado!</span>
                     </h2>
-                    <p style={{ color: 'var(--text-secondary)', marginBottom: 8, fontSize: 15 }}>
-                        Seu pagamento foi processado com sucesso.
-                    </p>
-                    <p style={{ color: 'var(--text-muted)', marginBottom: 24, fontSize: 13 }}>
-                        Seu acesso ao produto já está disponível no Painel do Aluno.
-                    </p>
-
-                    <div className="stat-card" style={{ marginBottom: 24 }}>
-                        <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 4 }}>Valor pago</div>
-                        <div style={{ fontSize: 32, fontWeight: 700 }} className="gradient-text">R$ {result.order.amount_display}</div>
+                    <p style={{ color: textSecondary, marginBottom: 8, fontSize: 15 }}>Seu pagamento foi processado com sucesso.</p>
+                    <p style={{ color: textMuted, marginBottom: 24, fontSize: 13 }}>Seu acesso ao produto já está disponível no Painel do Aluno.</p>
+                    <div style={{ background: isLight ? '#f0f0f5' : 'rgba(255,255,255,0.04)', borderRadius: 12, padding: 16, marginBottom: 24 }}>
+                        <div style={{ fontSize: 14, color: textSecondary, marginBottom: 4 }}>Valor pago</div>
+                        <div style={{ fontSize: 32, fontWeight: 700, color: accent }}>R$ {result.order.amount_display}</div>
                     </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                        <button
-                            className="btn-primary animate-pulse-glow"
-                            onClick={() => router.push('/area-membros')}
-                            style={{
-                                width: '100%', padding: '16px', fontSize: 15,
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                                border: 'none', cursor: 'pointer'
-                            }}
-                        >
-                            Acessar Painel do Aluno <FiArrowRight size={18} />
-                        </button>
-                        <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>
-                            Redirecionando automaticamente em {countdown}s...
-                        </p>
-                    </div>
+                    <button onClick={() => router.push('/area-membros')} style={{
+                        width: '100%', padding: '16px', fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                        background: accent, color: 'white', borderRadius: 12, border: 'none', cursor: 'pointer', fontWeight: 700
+                    }}>
+                        Acessar Painel do Aluno <FiArrowRight size={18} />
+                    </button>
+                    <p style={{ color: textMuted, fontSize: 12, marginTop: 12 }}>Redirecionando automaticamente em {countdown}s...</p>
                 </div>
-                <style jsx>{`
-                    @keyframes scaleIn {
-                        from { transform: scale(0); opacity: 0; }
-                        to { transform: scale(1); opacity: 1; }
-                    }
-                `}</style>
+                <style jsx>{`@keyframes scaleIn { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }`}</style>
             </div>
         );
     }
 
-    // PIX QR Code screen (waiting for payment)
+    // PIX QR Code screen
     if (result && result.pix) {
         return (
-            <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)', padding: 24 }}>
-                <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: 480, padding: 40, textAlign: 'center' }}>
-                    <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>Pague via Pix</h2>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 24 }}>
-                        Escaneie o QR Code ou copie o código abaixo
-                    </p>
+            <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: bgPrimary, padding: 24 }}>
+                <div style={{ width: '100%', maxWidth: 480, padding: 40, textAlign: 'center', background: bgCard, borderRadius: 20, border: `1px solid ${borderColor}` }}>
+                    <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8, color: textPrimary }}>Pague via Pix</h2>
+                    <p style={{ color: textSecondary, fontSize: 14, marginBottom: 24 }}>Escaneie o QR Code ou copie o código abaixo</p>
                     {result.pix?.qr_code_url && (
-                        <div style={{
-                            background: 'white', borderRadius: 16, padding: 16,
-                            display: 'inline-block', marginBottom: 20
-                        }}>
+                        <div style={{ background: 'white', borderRadius: 16, padding: 16, display: 'inline-block', marginBottom: 20 }}>
                             <img src={result.pix.qr_code_url} alt="QR Code Pix" style={{ width: 220, height: 220 }} />
                         </div>
                     )}
                     <div style={{ marginBottom: 20 }}>
-                        <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 8 }}>Valor</div>
-                        <div style={{ fontSize: 28, fontWeight: 700 }} className="gradient-text">R$ {result.order.amount_display}</div>
+                        <div style={{ fontSize: 14, color: textSecondary, marginBottom: 8 }}>Valor</div>
+                        <div style={{ fontSize: 28, fontWeight: 700, color: accent }}>R$ {result.order.amount_display}</div>
                     </div>
                     {result.pix?.qr_code && (
                         <div>
                             <div style={{
-                                background: 'var(--bg-secondary)', borderRadius: 10, padding: '12px 16px',
-                                fontSize: 12, color: 'var(--text-muted)', wordBreak: 'break-all',
-                                maxHeight: 80, overflow: 'auto', marginBottom: 12
+                                background: isLight ? '#f0f0f5' : 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '12px 16px',
+                                fontSize: 12, color: textMuted, wordBreak: 'break-all', maxHeight: 80, overflow: 'auto', marginBottom: 12
                             }}>
                                 {result.pix.qr_code}
                             </div>
-                            <button className="btn-primary" onClick={copyPixCode} style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                            <button onClick={copyPixCode} style={{
+                                display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px',
+                                background: accent, color: 'white', borderRadius: 10, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13
+                            }}>
                                 <FiCopy size={14} /> Copiar Pix Copia e Cola
                             </button>
                         </div>
                     )}
-
-                    {/* Polling indicator */}
                     <div style={{
-                        marginTop: 24, padding: '16px', borderRadius: 12,
-                        background: 'rgba(108,92,231,0.08)', border: '1px solid rgba(108,92,231,0.2)'
+                        marginTop: 24, padding: 16, borderRadius: 12,
+                        background: `${accent}11`, border: `1px solid ${accent}33`
                     }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 13, color: 'var(--accent-secondary)' }}>
-                            <div style={{
-                                width: 8, height: 8, borderRadius: '50%', background: 'var(--accent-primary)',
-                                animation: 'pulse 1.5s ease infinite'
-                            }} />
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 13, color: accent }}>
+                            <div style={{ width: 8, height: 8, borderRadius: '50%', background: accent, animation: 'pulse 1.5s ease infinite' }} />
                             Aguardando confirmação do pagamento...
                         </div>
                     </div>
                 </div>
-                <style jsx>{`
-                    @keyframes pulse {
-                        0%, 100% { opacity: 1; transform: scale(1); }
-                        50% { opacity: 0.4; transform: scale(0.8); }
-                    }
-                `}</style>
+                <style jsx>{`@keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.8); } }`}</style>
             </div>
         );
     }
 
     return (
-        <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', padding: 24 }}>
+        <div style={{ minHeight: '100vh', background: bgPrimary, color: textPrimary }}>
+            {/* Countdown Timer */}
+            {settings.show_countdown && timerSeconds > 0 && (
+                <div style={{
+                    background: accent, color: 'white', padding: '10px 16px',
+                    textAlign: 'center', fontSize: 14, fontWeight: 600,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                    position: 'sticky', top: 0, zIndex: 50
+                }}>
+                    <FiClock size={14} />
+                    {settings.countdown_text}
+                    <span style={{
+                        fontFamily: 'monospace', fontWeight: 800, fontSize: 16,
+                        background: 'rgba(0,0,0,0.2)', padding: '3px 10px', borderRadius: 6
+                    }}>
+                        {formatTimer(timerSeconds)}
+                    </span>
+                </div>
+            )}
+
+            {/* Banner */}
+            {(settings.banner_url || settings.banner_text) && (
+                <div style={{
+                    height: settings.banner_url ? 160 : 'auto', position: 'relative',
+                    background: settings.banner_url ? `url(${settings.banner_url}) center/cover no-repeat` : `linear-gradient(135deg, ${accent}44, ${accent}11)`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                    {settings.banner_url && <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.35)' }} />}
+                    {settings.banner_text && (
+                        <div style={{
+                            position: 'relative', zIndex: 1, padding: '20px 24px', fontSize: 22, fontWeight: 800,
+                            color: 'white', textShadow: settings.banner_url ? '0 2px 12px rgba(0,0,0,0.5)' : 'none',
+                            textAlign: 'center'
+                        }}>
+                            {settings.banner_text}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Notice */}
+            {settings.notice_text && (
+                <div style={{
+                    maxWidth: 1000, margin: '16px auto 0', padding: '0 24px'
+                }}>
+                    <div style={{
+                        padding: '14px 20px', borderRadius: 12, fontSize: 14, fontWeight: 600,
+                        background: noticeColors[settings.notice_type]?.bg,
+                        border: `1px solid ${noticeColors[settings.notice_type]?.border}`,
+                        color: isLight ? (settings.notice_type === 'warning' ? '#b8860b' : settings.notice_type === 'info' ? '#2171b5' : '#0e8c5e') : noticeColors[settings.notice_type]?.text,
+                        textAlign: 'center'
+                    }}>
+                        {settings.notice_text}
+                    </div>
+                </div>
+            )}
+
             {/* Header */}
-            <div style={{ maxWidth: 1000, margin: '0 auto', padding: '20px 0 40px', textAlign: 'center' }}>
+            <div style={{ maxWidth: 1000, margin: '0 auto', padding: '20px 24px 40px', textAlign: 'center' }}>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                     <div style={{
-                        width: 28, height: 28, borderRadius: 8, background: 'var(--accent-gradient)',
+                        width: 28, height: 28, borderRadius: 8, background: `linear-gradient(135deg, ${accent}, ${accent}99)`,
                         display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: 'white'
                     }}>G</div>
-                    <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-secondary)' }}>GouPay</span>
+                    <span style={{ fontSize: 15, fontWeight: 600, color: textSecondary }}>GouPay</span>
                 </div>
             </div>
 
-            <div style={{ maxWidth: 1000, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32, alignItems: 'start' }}>
+            <div style={{ maxWidth: 1000, margin: '0 auto', padding: '0 24px 40px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32, alignItems: 'start' }}>
                 {/* Product Info */}
-                <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
-                    <div style={{
-                        height: 220, background: 'linear-gradient(135deg, rgba(108,92,231,0.2) 0%, rgba(162,155,254,0.1) 100%)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center'
-                    }}>
-                        {product.image_url ? (
-                            <img src={product.image_url} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        ) : (
-                            <FiShoppingCart size={48} style={{ opacity: 0.3 }} />
-                        )}
-                    </div>
+                <div style={{ padding: 0, overflow: 'hidden', background: bgCard, borderRadius: 16, border: `1px solid ${borderColor}` }}>
+                    {!settings.hide_product_image && (
+                        <div style={{
+                            height: 220, background: `linear-gradient(135deg, ${accent}22, ${accent}0a)`,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}>
+                            {product.image_url ? (
+                                <img src={product.image_url} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                                <FiShoppingCart size={48} style={{ opacity: 0.3, color: textMuted }} />
+                            )}
+                        </div>
+                    )}
                     <div style={{ padding: 28 }}>
-                        <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 500 }}>
-                            Vendido por {product.seller_name}
-                        </span>
-                        <h1 style={{ fontSize: 24, fontWeight: 700, marginTop: 8, marginBottom: 12 }}>{product.name}</h1>
-                        <p style={{ color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.7, marginBottom: 20 }}>
+                        <span style={{ fontSize: 12, color: textMuted, fontWeight: 500 }}>Vendido por {product.seller_name}</span>
+                        <h1 style={{ fontSize: 24, fontWeight: 700, marginTop: 8, marginBottom: 12, color: textPrimary }}>{product.name}</h1>
+                        <p style={{ color: textSecondary, fontSize: 14, lineHeight: 1.7, marginBottom: 20 }}>
                             {product.description || 'Sem descrição disponível'}
                         </p>
-                        <div style={{ fontSize: 32, fontWeight: 800 }} className="gradient-text">
-                            R$ {product.price_display}
-                        </div>
+                        <div style={{ fontSize: 32, fontWeight: 800, color: accent }}>R$ {product.price_display}</div>
                     </div>
                 </div>
 
                 {/* Payment Form */}
-                <div className="glass-card animate-fade-in" style={{ padding: 28 }}>
-                    <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 24 }}>Finalizar Compra</h2>
-
+                <div style={{ padding: 28, background: bgCard, borderRadius: 16, border: `1px solid ${borderColor}` }}>
+                    <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 24, color: textPrimary }}>Finalizar Compra</h2>
                     <form onSubmit={handlePay}>
-                        {/* Buyer info */}
                         <div style={{ marginBottom: 20 }}>
-                            <label style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>Nome completo</label>
-                            <input className="input-field" placeholder="Seu nome" required value={form.name} onChange={e => update('name', e.target.value)} />
+                            <label style={{ fontSize: 13, fontWeight: 500, color: textSecondary, marginBottom: 6, display: 'block' }}>Nome completo</label>
+                            <input placeholder="Seu nome" required value={form.name} onChange={e => update('name', e.target.value)}
+                                style={{ width: '100%', padding: '12px 16px', borderRadius: 10, border: `1px solid ${borderColor}`, background: inputBg, color: textPrimary, fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
                             <div>
-                                <label style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>Email</label>
-                                <input type="email" className="input-field" placeholder="seu@email.com" required value={form.email} onChange={e => update('email', e.target.value)} />
+                                <label style={{ fontSize: 13, fontWeight: 500, color: textSecondary, marginBottom: 6, display: 'block' }}>Email</label>
+                                <input type="email" placeholder="seu@email.com" required value={form.email} onChange={e => update('email', e.target.value)}
+                                    style={{ width: '100%', padding: '12px 16px', borderRadius: 10, border: `1px solid ${borderColor}`, background: inputBg, color: textPrimary, fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
                             </div>
                             <div>
-                                <label style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>CPF</label>
-                                <input className="input-field" placeholder="000.000.000-00" required value={form.cpf} onChange={e => update('cpf', e.target.value)} />
+                                <label style={{ fontSize: 13, fontWeight: 500, color: textSecondary, marginBottom: 6, display: 'block' }}>CPF</label>
+                                <input placeholder="000.000.000-00" required value={form.cpf} onChange={e => update('cpf', e.target.value)}
+                                    style={{ width: '100%', padding: '12px 16px', borderRadius: 10, border: `1px solid ${borderColor}`, background: inputBg, color: textPrimary, fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
                             </div>
                         </div>
                         <div style={{ marginBottom: 20 }}>
-                            <label style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>Telefone</label>
-                            <input className="input-field" placeholder="(11) 99999-9999" required value={form.phone} onChange={e => update('phone', e.target.value)} />
+                            <label style={{ fontSize: 13, fontWeight: 500, color: textSecondary, marginBottom: 6, display: 'block' }}>Telefone</label>
+                            <input placeholder="(11) 99999-9999" required value={form.phone} onChange={e => update('phone', e.target.value)}
+                                style={{ width: '100%', padding: '12px 16px', borderRadius: 10, border: `1px solid ${borderColor}`, background: inputBg, color: textPrimary, fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
                         </div>
 
                         {/* Payment method */}
                         <div style={{ marginBottom: 20 }}>
-                            <label style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 10, display: 'block' }}>Forma de pagamento</label>
+                            <label style={{ fontSize: 13, fontWeight: 500, color: textSecondary, marginBottom: 10, display: 'block' }}>Forma de pagamento</label>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                                 {[
                                     { key: 'pix', label: 'Pix', icon: <FiSmartphone size={18} /> },
@@ -346,10 +397,10 @@ export default function CheckoutPage() {
                                         style={{
                                             padding: '14px', borderRadius: 12, cursor: 'pointer', display: 'flex',
                                             alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 13, fontWeight: 500,
-                                            transition: 'all 0.2s ease', fontFamily: 'Inter, sans-serif',
-                                            background: paymentMethod === m.key ? 'rgba(108,92,231,0.12)' : 'var(--bg-secondary)',
-                                            border: `1px solid ${paymentMethod === m.key ? 'var(--accent-primary)' : 'var(--border-color)'}`,
-                                            color: paymentMethod === m.key ? 'var(--accent-secondary)' : 'var(--text-secondary)'
+                                            transition: 'all 0.2s ease', fontFamily: 'inherit',
+                                            background: paymentMethod === m.key ? `${accent}1a` : (isLight ? '#f5f5f5' : 'var(--bg-secondary)'),
+                                            border: `1px solid ${paymentMethod === m.key ? accent : borderColor}`,
+                                            color: paymentMethod === m.key ? accent : textSecondary
                                         }}>
                                         {m.icon} {m.label}
                                     </button>
@@ -359,34 +410,43 @@ export default function CheckoutPage() {
 
                         {/* Credit Card Fields */}
                         {paymentMethod === 'credit_card' && (
-                            <div className="animate-fade-in" style={{ marginBottom: 20 }}>
+                            <div style={{ marginBottom: 20 }}>
                                 <div style={{ marginBottom: 12 }}>
-                                    <label style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>Número do cartão</label>
-                                    <input className="input-field" placeholder="0000 0000 0000 0000" required value={form.card_number} onChange={e => update('card_number', e.target.value)} />
+                                    <label style={{ fontSize: 13, fontWeight: 500, color: textSecondary, marginBottom: 6, display: 'block' }}>Número do cartão</label>
+                                    <input placeholder="0000 0000 0000 0000" required value={form.card_number} onChange={e => update('card_number', e.target.value)}
+                                        style={{ width: '100%', padding: '12px 16px', borderRadius: 10, border: `1px solid ${borderColor}`, background: inputBg, color: textPrimary, fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
                                 </div>
                                 <div style={{ marginBottom: 12 }}>
-                                    <label style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>Nome no cartão</label>
-                                    <input className="input-field" placeholder="Nome como está no cartão" required value={form.card_holder} onChange={e => update('card_holder', e.target.value)} />
+                                    <label style={{ fontSize: 13, fontWeight: 500, color: textSecondary, marginBottom: 6, display: 'block' }}>Nome no cartão</label>
+                                    <input placeholder="Nome como está no cartão" required value={form.card_holder} onChange={e => update('card_holder', e.target.value)}
+                                        style={{ width: '100%', padding: '12px 16px', borderRadius: 10, border: `1px solid ${borderColor}`, background: inputBg, color: textPrimary, fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
                                     <div>
-                                        <label style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>Mês</label>
-                                        <input className="input-field" placeholder="MM" maxLength={2} required value={form.card_exp_month} onChange={e => update('card_exp_month', e.target.value)} />
+                                        <label style={{ fontSize: 13, fontWeight: 500, color: textSecondary, marginBottom: 6, display: 'block' }}>Mês</label>
+                                        <input placeholder="MM" maxLength={2} required value={form.card_exp_month} onChange={e => update('card_exp_month', e.target.value)}
+                                            style={{ width: '100%', padding: '12px 16px', borderRadius: 10, border: `1px solid ${borderColor}`, background: inputBg, color: textPrimary, fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
                                     </div>
                                     <div>
-                                        <label style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>Ano</label>
-                                        <input className="input-field" placeholder="AA" maxLength={2} required value={form.card_exp_year} onChange={e => update('card_exp_year', e.target.value)} />
+                                        <label style={{ fontSize: 13, fontWeight: 500, color: textSecondary, marginBottom: 6, display: 'block' }}>Ano</label>
+                                        <input placeholder="AA" maxLength={2} required value={form.card_exp_year} onChange={e => update('card_exp_year', e.target.value)}
+                                            style={{ width: '100%', padding: '12px 16px', borderRadius: 10, border: `1px solid ${borderColor}`, background: inputBg, color: textPrimary, fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
                                     </div>
                                     <div>
-                                        <label style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>CVV</label>
-                                        <input className="input-field" placeholder="000" maxLength={4} required value={form.card_cvv} onChange={e => update('card_cvv', e.target.value)} />
+                                        <label style={{ fontSize: 13, fontWeight: 500, color: textSecondary, marginBottom: 6, display: 'block' }}>CVV</label>
+                                        <input placeholder="000" maxLength={4} required value={form.card_cvv} onChange={e => update('card_cvv', e.target.value)}
+                                            style={{ width: '100%', padding: '12px 16px', borderRadius: 10, border: `1px solid ${borderColor}`, background: inputBg, color: textPrimary, fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
                                     </div>
                                 </div>
                             </div>
                         )}
 
-                        <button type="submit" className="btn-primary animate-pulse-glow" disabled={processing}
-                            style={{ width: '100%', padding: '16px', fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                        <button type="submit" disabled={processing}
+                            style={{
+                                width: '100%', padding: '16px', fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                                background: accent, color: 'white', borderRadius: 12, border: 'none', cursor: processing ? 'not-allowed' : 'pointer',
+                                fontWeight: 700, opacity: processing ? 0.7 : 1, transition: 'all 0.2s'
+                            }}>
                             {processing ? 'Processando...' : (
                                 <>
                                     {paymentMethod === 'pix' ? <FiSmartphone size={18} /> : <FiCreditCard size={18} />}
@@ -394,12 +454,19 @@ export default function CheckoutPage() {
                                 </>
                             )}
                         </button>
-                        <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)', marginTop: 12 }}>
+                        <p style={{ textAlign: 'center', fontSize: 11, color: textMuted, marginTop: 12 }}>
                             🔒 Pagamento seguro processado via Pagar.me
                         </p>
                     </form>
                 </div>
             </div>
+
+            <style jsx>{`
+                input:focus { border-color: ${accent} !important; box-shadow: 0 0 0 3px ${accent}22 !important; }
+                @media (max-width: 768px) {
+                    div[style*="gridTemplateColumns: '1fr 1fr'"] { grid-template-columns: 1fr !important; }
+                }
+            `}</style>
         </div>
     );
 }

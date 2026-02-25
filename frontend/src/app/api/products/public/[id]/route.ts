@@ -7,7 +7,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const { data: product } = await supabase
         .from('products')
-        .select('id, name, description, price, price_display, image_url, type, user_id')
+        .select('id, name, description, price, price_display, image_url, type, user_id, checkout_settings')
         .eq('id', id)
         .eq('status', 'active')
         .single();
