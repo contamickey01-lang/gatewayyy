@@ -1,4 +1,5 @@
 export const dynamic = 'force-dynamic';
+// Last update: 2026-02-25 10:59
 
 import { NextRequest } from 'next/server';
 import { supabase } from '@/lib/db';
