@@ -4,9 +4,10 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { productsAPI } from '@/lib/api';
 import toast from 'react-hot-toast';
+import axios from 'axios';
 import {
     FiArrowLeft, FiSave, FiSun, FiMoon, FiImage, FiClock,
-    FiAlertTriangle, FiDroplet, FiEye, FiCheck
+    FiAlertTriangle, FiDroplet, FiEye, FiCheck, FiUpload, FiTrash2
 } from 'react-icons/fi';
 
 const DEFAULT_SETTINGS = {
@@ -31,6 +32,7 @@ export default function CheckoutCustomizationPage() {
     const [settings, setSettings] = useState(DEFAULT_SETTINGS);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [uploadingBanner, setUploadingBanner] = useState(false);
 
     useEffect(() => {
         loadProduct();
@@ -64,6 +66,26 @@ export default function CheckoutCustomizationPage() {
     };
 
     const update = (key: string, value: any) => setSettings({ ...settings, [key]: value });
+
+    const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setUploadingBanner(true);
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            const token = localStorage.getItem('token');
+            const { data } = await axios.post('/api/upload', formData, {
+                headers: { 'Content-Type': 'multipart/form-data', 'Authorization': `Bearer ${token}` }
+            });
+            update('banner_url', data.url);
+            toast.success('Banner enviado!');
+        } catch (err) {
+            toast.error('Erro ao enviar imagem');
+        } finally {
+            setUploadingBanner(false);
+        }
+    };
 
     if (loading) {
         return (
@@ -154,8 +176,38 @@ export default function CheckoutCustomizationPage() {
                             <h3 style={{ fontSize: 14, fontWeight: 600 }}>Banner</h3>
                         </div>
                         <div style={{ marginBottom: 12 }}>
-                            <label style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4, display: 'block' }}>URL da imagem</label>
-                            <input className="input-field" placeholder="https://..." value={settings.banner_url} onChange={e => update('banner_url', e.target.value)} />
+                            <label style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6, display: 'block' }}>Imagem do banner</label>
+                            {settings.banner_url ? (
+                                <div style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+                                    <img src={settings.banner_url} alt="Banner" style={{ width: '100%', height: 100, objectFit: 'cover', display: 'block' }} />
+                                    <button onClick={() => update('banner_url', '')} style={{
+                                        position: 'absolute', top: 6, right: 6, width: 28, height: 28, borderRadius: 8,
+                                        background: 'rgba(0,0,0,0.7)', border: 'none', cursor: 'pointer', color: '#ff6b6b',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                    }}>
+                                        <FiTrash2 size={13} />
+                                    </button>
+                                </div>
+                            ) : (
+                                <div
+                                    onClick={() => document.getElementById('bannerUpload')?.click()}
+                                    style={{
+                                        border: '2px dashed var(--border-color)', borderRadius: 10, padding: '20px 16px',
+                                        textAlign: 'center', cursor: uploadingBanner ? 'not-allowed' : 'pointer',
+                                        transition: 'border-color 0.2s', opacity: uploadingBanner ? 0.6 : 1
+                                    }}
+                                >
+                                    {uploadingBanner ? (
+                                        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Enviando...</div>
+                                    ) : (
+                                        <>
+                                            <FiUpload size={20} style={{ marginBottom: 6, color: 'var(--accent-secondary)' }} />
+                                            <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Clique para enviar uma imagem</p>
+                                        </>
+                                    )}
+                                </div>
+                            )}
+                            <input id="bannerUpload" type="file" accept="image/*" style={{ display: 'none' }} onChange={handleBannerUpload} />
                         </div>
                         <div>
                             <label style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4, display: 'block' }}>Texto sobreposto</label>
