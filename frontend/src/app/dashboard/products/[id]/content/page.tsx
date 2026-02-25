@@ -243,8 +243,8 @@ export default function ContentEditorPage() {
 
             {/* Module Modal */}
             {showModuleModal && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-                    <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: 400, padding: 32 }}>
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                    <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: 500, padding: 40 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24 }}>
                             <h3 style={{ fontSize: 18, fontWeight: 700 }}>{editingModule ? 'Editar Módulo' : 'Novo Módulo'}</h3>
                             <button onClick={() => setShowModuleModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><FiX size={20} /></button>
@@ -266,8 +266,8 @@ export default function ContentEditorPage() {
 
             {/* Lesson Modal */}
             {showLessonModal && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-                    <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: 500, padding: 32, maxHeight: 'calc(100vh - 48px)', overflowY: 'auto' }}>
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                    <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: 650, padding: 40, maxHeight: '90vh', overflowY: 'auto' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24 }}>
                             <h3 style={{ fontSize: 18, fontWeight: 700 }}>{editingLesson ? 'Editar Aula' : 'Nova Aula'}</h3>
                             <button onClick={() => setShowLessonModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><FiX size={20} /></button>
