@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
             if (order.product_id) {
                 const { data: product } = await supabase
                     .from('products')
-                    .select('sales_count')
+                    .select('sales_count, type')
                     .eq('id', order.product_id)
                     .single();
 
@@ -85,6 +85,45 @@ export async function POST(req: NextRequest) {
                     await supabase.from('products')
                         .update({ sales_count: (product.sales_count || 0) + 1 })
                         .eq('id', order.product_id);
+
+                    // DIGITAL PRODUCT AUTO-ENROLLMENT
+                    if (product.type === 'digital') {
+                        // 1. Get or Create User
+                        let studentId = order.customer_id; // Default if buyer is logged in
+
+                        // If order has an email (guest or specific customer email)
+                        const customerEmail = order.customer_email;
+                        if (customerEmail) {
+                            const { data: existingUser } = await supabase
+                                .from('users').select('id').eq('email', customerEmail.toLowerCase()).single();
+
+                            if (existingUser) {
+                                studentId = existingUser.id;
+                            } else {
+                                // Create shadow user
+                                const newUserId = uuidv4();
+                                const { error: userError } = await supabase.from('users').insert({
+                                    id: newUserId,
+                                    email: customerEmail.toLowerCase(),
+                                    name: order.customer_name || 'Estudante',
+                                    role: 'customer',
+                                    // Set a flag that password needs setting
+                                    password_hash: 'INITIAL_PAYMENT_PENDING_SET'
+                                });
+                                if (!userError) studentId = newUserId;
+                            }
+                        }
+
+                        // 2. Create Enrollment
+                        if (studentId) {
+                            await supabase.from('enrollments').upsert({
+                                user_id: studentId,
+                                product_id: order.product_id,
+                                order_id: order.id,
+                                status: 'active'
+                            }, { onConflict: 'user_id, product_id' });
+                        }
+                    }
                 }
             }
         } else {
