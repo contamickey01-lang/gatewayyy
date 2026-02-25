@@ -87,11 +87,7 @@ export async function GET(req: NextRequest) {
             total_withdrawn: totalWithdrawnDec.toFixed(2),
             total_fees: totalFeesDec.toFixed(2),
             total_products: products?.length || 0,
-            net_revenue: (totalSoldDec - totalFeesDec).toFixed(2),
-            _debug: {
-                recipient_id: recipient?.pagarme_recipient_id || 'not_found',
-                using_pagarme: usedPagarme
-            }
+            net_revenue: (totalSoldDec - totalFeesDec).toFixed(2)
         },
         monthly_sales,
         recent_orders: recent_orders || []
