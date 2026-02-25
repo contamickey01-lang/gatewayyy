@@ -29,12 +29,16 @@ export async function GET(req: NextRequest) {
     if (recipient?.pagarme_recipient_id) {
         try {
             const balance = await PagarmeService.getRecipientBalance(recipient.pagarme_recipient_id);
-            console.log(`Balance for recipient ${recipient.pagarme_recipient_id}:`, JSON.stringify(balance, null, 2));
+            // console.log(`Balance for recipient ${recipient.pagarme_recipient_id}:`, JSON.stringify(balance, null, 2));
 
             // Helper to get amount regardless of structure (array or object)
             const getAmount = (field: any) => {
                 if (!field) return 0;
-                if (Array.isArray(field)) return field[0]?.amount || 0;
+                if (Array.isArray(field)) {
+                    // Sometimes v5 returns an array for available/pending in some contexts
+                    const item = field.find((i: any) => i.amount !== undefined) || field[0];
+                    return item?.amount || 0;
+                }
                 return field.amount || 0;
             };
 
@@ -43,36 +47,14 @@ export async function GET(req: NextRequest) {
             totalWithdrawnDec = getAmount(balance.transferred) / 100;
 
             // Fetch total sold from orders (Pagar.me balance doesn't show history)
-            const { data: salesData, error: salesError } = await supabase
+            const { data: salesData } = await supabase
                 .from('orders').select('amount').eq('seller_id', userId).eq('status', 'paid');
 
-            if (salesError) console.error('Sales query error:', salesError);
             totalSoldDec = (salesData || []).reduce((s, t) => s + (t.amount || 0), 0) / 100;
-
-            console.log(`Calculated stats for ${userId}: sold=${totalSoldDec}, available=${availableDec}, pending=${pendingDec}`);
             usedPagarme = true;
         } catch (pErr: any) {
-            console.error('Pagar.me balance error in dashboard:', pErr.response?.data || pErr.message);
+            console.error('Pagar.me balance error:', pErr.response?.data || pErr.message);
         }
-    }
-
-    // Fallback if Pagar.me failed or not setup
-    if (!usedPagarme) {
-        console.log(`Falling back to local calculation for user ${userId}`);
-        const { data: sales } = await supabase
-            .from('transactions').select('amount').eq('user_id', userId).eq('type', 'sale').eq('status', 'confirmed');
-        const { data: fees } = await supabase
-            .from('transactions').select('amount').eq('user_id', userId).eq('type', 'fee').eq('status', 'confirmed');
-        const { data: withdrawals } = await supabase
-            .from('transactions').select('amount').eq('user_id', userId).eq('type', 'withdrawal').eq('status', 'confirmed');
-        const { data: pending } = await supabase
-            .from('transactions').select('amount').eq('user_id', userId).eq('type', 'sale').eq('status', 'pending');
-
-        totalSoldDec = (sales || []).reduce((s, t) => s + (t.amount || 0), 0) / 100;
-        totalFeesDec = (fees || []).reduce((s, t) => s + (t.amount || 0), 0) / 100;
-        totalWithdrawnDec = (withdrawals || []).reduce((s, t) => s + (t.amount || 0), 0) / 100;
-        pendingDec = (pending || []).reduce((s, t) => s + (t.amount || 0), 0) / 100;
-        availableDec = totalSoldDec - totalFeesDec - totalWithdrawnDec;
     }
 
     // Monthly sales
@@ -105,7 +87,11 @@ export async function GET(req: NextRequest) {
             total_withdrawn: totalWithdrawnDec.toFixed(2),
             total_fees: totalFeesDec.toFixed(2),
             total_products: products?.length || 0,
-            net_revenue: (totalSoldDec - totalFeesDec).toFixed(2)
+            net_revenue: (totalSoldDec - totalFeesDec).toFixed(2),
+            _debug: {
+                recipient_id: recipient?.pagarme_recipient_id || 'not_found',
+                using_pagarme: usedPagarme
+            }
         },
         monthly_sales,
         recent_orders: recent_orders || []
