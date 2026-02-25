@@ -6,9 +6,6 @@ import { getAuthUser, jsonError, jsonSuccess } from '@/lib/auth';
 import { PagarmeService } from '@/lib/pagarme';
 
 export async function GET(req: NextRequest) {
-    const auth = await getAuthUser(req);
-    if (!auth) return jsonError('Não autorizado', 401);
-
     const platformRecipientId = process.env.PLATFORM_RECIPIENT_ID;
     const results: any = {
         platform: { id: platformRecipientId, status: 'checking', data: null, error: null },
@@ -29,10 +26,10 @@ export async function GET(req: NextRequest) {
         results.platform.status = 'MISSING';
     }
 
-    // 2. Check a sample Seller Recipient (Ana Clara)
+    // 2. Check a sample Seller Recipient (First one in DB)
     try {
         const { data: recipient } = await supabase
-            .from('recipients').select('pagarme_recipient_id').eq('user_id', auth.user.id).single();
+            .from('recipients').select('pagarme_recipient_id').limit(1).single();
 
         if (recipient?.pagarme_recipient_id) {
             results.seller.id = recipient.pagarme_recipient_id;
