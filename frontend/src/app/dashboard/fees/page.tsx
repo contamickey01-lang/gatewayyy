@@ -40,21 +40,6 @@ export default function FeesPage() {
                 <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>Transparência total nos seus recebíveis</p>
             </div>
 
-            <div className="glass-card" style={{ padding: 24, marginBottom: 32, borderLeft: '4px solid var(--accent-primary)' }}>
-                <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-                    <div style={{ padding: 8, borderRadius: 10, background: 'rgba(108,92,231,0.1)', color: 'var(--accent-primary)' }}>
-                        <FiInfo size={20} />
-                    </div>
-                    <div>
-                        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>Como funciona o Split de Pagamento?</h3>
-                        <p style={{ color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.6 }}>
-                            Nossa plataforma utiliza um sistema de split automático. Quando uma venda é realizada, o valor é dividido
-                            instantaneamente: <strong>3%</strong> ficam com a PayGateway pela intermediação, e os custos do processador
-                            (Pagar.me) são descontados da parte do vendedor. Dessa forma, garantimos a menor taxa do mercado para você!
-                        </p>
-                    </div>
-                </div>
-            </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20, marginBottom: 32 }}>
                 {fees.map((fee, i) => (
