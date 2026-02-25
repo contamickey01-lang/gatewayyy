@@ -58,9 +58,9 @@ export async function GET(req: NextRequest) {
             };
 
             // Overlay local values with Real-time Pagar.me values
-            availableDec = getAmount(balance.available) / 100;
-            pendingDec = getAmount(balance.waiting_funds) / 100;
-            totalWithdrawnDec = getAmount(balance.transferred) / 100;
+            availableDec = (balance.available_amount !== undefined ? balance.available_amount : getAmount(balance.available)) / 100;
+            pendingDec = (balance.waiting_funds_amount !== undefined ? balance.waiting_funds_amount : getAmount(balance.waiting_funds)) / 100;
+            totalWithdrawnDec = (balance.transferred_amount !== undefined ? balance.transferred_amount : getAmount(balance.transferred)) / 100;
             usedPagarme = true;
         } catch (pErr: any) {
             console.error('[STATS] Pagar.me balance error:', pErr.response?.data || pErr.message);

@@ -28,9 +28,9 @@ export async function GET(req: NextRequest) {
                     return field.amount || 0;
                 };
 
-                const available = getAmount(balance.available);
-                const pending = getAmount(balance.waiting_funds);
-                const transferred = getAmount(balance.transferred);
+                const available = balance.available_amount !== undefined ? balance.available_amount : getAmount(balance.available);
+                const pending = balance.waiting_funds_amount !== undefined ? balance.waiting_funds_amount : getAmount(balance.waiting_funds);
+                const transferred = balance.transferred_amount !== undefined ? balance.transferred_amount : getAmount(balance.transferred);
 
                 // Fetch total sold from orders (Gross)
                 const { data: orders } = await supabase
