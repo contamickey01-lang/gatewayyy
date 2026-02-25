@@ -19,11 +19,24 @@ export async function GET(req: NextRequest) {
     return jsonSuccess({ user });
 }
 
+const BANK_CODES: Record<string, string> = {
+    'nubank': '260', 'inter': '077', 'bradesco': '237', 'itau': '341', 'santander': '033',
+    'caixa': '104', 'banco do brasil': '001', 'bb': '001', 'pagbank': '290', 'pagseguro': '290',
+    'mercado pago': '323', 'c6': '336', 'picpay': '380', 'btg': '208',
+};
+
 export async function PUT(req: NextRequest) {
     const auth = await getAuthUser(req);
     if (!auth) return jsonError('Não autorizado', 401);
 
     try {
+        // Fetch old user to detect changes in critical fields (like document)
+        const { data: oldUser } = await supabase
+            .from('users')
+            .select('cpf_cnpj')
+            .eq('id', auth.user.id)
+            .single();
+
         const body = await req.json();
         const allowedFields = [
             'name', 'phone', 'cpf_cnpj',
@@ -70,7 +83,23 @@ export async function PUT(req: NextRequest) {
                     .eq('user_id', auth.user.id)
                     .single();
 
-                const cleanBankCode = body.bank_name?.replace(/\D/g, '').substring(0, 3);
+                // Detect if the document (CPF/CNPJ) changed
+                const oldDoc = oldUser?.cpf_cnpj?.replace(/\D/g, '');
+                const newDoc = user.cpf_cnpj?.replace(/\D/g, '');
+                const documentChanged = oldDoc && newDoc && oldDoc !== newDoc;
+
+                // Handle Bank Code Mapping
+                let cleanBankCode = body.bank_name?.replace(/\D/g, '').substring(0, 3);
+                if (!cleanBankCode && body.bank_name) {
+                    const searchName = body.bank_name.toLowerCase().trim();
+                    for (const [name, code] of Object.entries(BANK_CODES)) {
+                        if (searchName.includes(name)) {
+                            cleanBankCode = code;
+                            break;
+                        }
+                    }
+                }
+
                 const cleanAgency = body.bank_agency?.replace(/\D/g, '');
                 const cleanAccount = body.bank_account?.replace(/\D/g, '');
 
@@ -81,30 +110,35 @@ export async function PUT(req: NextRequest) {
                 const recipientData = {
                     name: user.name,
                     email: user.email,
-                    cpf_cnpj: user.cpf_cnpj.replace(/\D/g, ''),
-                    type: user.cpf_cnpj?.replace(/\D/g, '').length > 11 ? 'company' : 'individual',
-                    bank_code: cleanBankCode,
+                    cpf_cnpj: newDoc,
+                    type: newDoc.length > 11 ? 'company' : 'individual',
+                    bank_code: cleanBankCode || '001',
                     agency: cleanAgency,
                     account: cleanAccount,
                     account_digit: body.bank_account_digit || '0',
                     account_type: body.bank_account_type || 'checking'
                 };
 
-                if (existingRecipient && !existingRecipient.pagarme_recipient_id.startsWith('re_test_')) {
+                // Logic: 
+                // 1. If no recipient exists OR document changed -> Create NEW recipient
+                // 2. If recipient exists AND document is same -> Update EXISTING recipient
+
+                const isTestRecipient = existingRecipient?.pagarme_recipient_id?.startsWith('re_test_');
+
+                if (existingRecipient && !documentChanged && !isTestRecipient) {
                     // Update existing real recipient
                     await PagarmeService.updateRecipient(existingRecipient.pagarme_recipient_id, recipientData);
                 } else {
-                    // Create new recipient
+                    // Create new recipient (either first time or replacement due to CPF change)
                     const pRecipient = await PagarmeService.createRecipient(recipientData);
 
+                    // Update local database with the new ID
                     if (existingRecipient) {
-                        // Update the test record to a real one
                         await supabase
                             .from('recipients')
                             .update({ pagarme_recipient_id: pRecipient.id, status: 'active' })
                             .eq('user_id', auth.user.id);
                     } else {
-                        // Create new record
                         await supabase.from('recipients').insert({
                             id: uuidv4(),
                             user_id: auth.user.id,
