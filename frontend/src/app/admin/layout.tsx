@@ -50,7 +50,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     </div>
                     <div>
                         <span style={{ fontSize: 16, fontWeight: 700, display: 'block' }}>Admin Panel</span>
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>PayGateway</span>
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>GouPay</span>
                     </div>
                 </div>
 

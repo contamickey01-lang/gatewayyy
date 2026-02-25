@@ -60,8 +60,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         width: 36, height: 36, borderRadius: 10,
                         background: 'var(--accent-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontSize: 18, fontWeight: 800, color: 'white'
-                    }}>P</div>
-                    <span style={{ fontSize: 18, fontWeight: 700 }}>Pay<span className="gradient-text">Gateway</span></span>
+                    }}>G</div>
+                    <span style={{ fontSize: 18, fontWeight: 700 }}>Gou<span className="gradient-text">Pay</span></span>
                 </div>
 
                 {/* Navigation */}

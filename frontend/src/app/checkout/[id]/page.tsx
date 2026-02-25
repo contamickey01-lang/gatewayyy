@@ -166,8 +166,8 @@ export default function CheckoutPage() {
                     <div style={{
                         width: 28, height: 28, borderRadius: 8, background: 'var(--accent-gradient)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: 'white'
-                    }}>P</div>
-                    <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-secondary)' }}>PayGateway</span>
+                    }}>G</div>
+                    <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-secondary)' }}>GouPay</span>
                 </div>
             </div>
 

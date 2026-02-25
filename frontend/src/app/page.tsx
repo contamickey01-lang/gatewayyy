@@ -19,8 +19,8 @@ export default function LandingPage() {
               width: 36, height: 36, borderRadius: 10,
               background: 'var(--accent-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 18, fontWeight: 800, color: 'white'
-            }}>P</div>
-            <span style={{ fontSize: 20, fontWeight: 700 }}>Pay<span className="gradient-text">Gateway</span></span>
+            }}>G</div>
+            <span style={{ fontSize: 20, fontWeight: 700 }}>Gou<span className="gradient-text">Pay</span></span>
           </div>
           <nav style={{ display: 'flex', gap: 32, alignItems: 'center' }}>
             <Link href="/login" style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontSize: 14, fontWeight: 500, transition: 'color 0.2s' }}>Entrar</Link>
@@ -145,10 +145,10 @@ export default function LandingPage() {
             width: 28, height: 28, borderRadius: 8,
             background: 'var(--accent-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 14, fontWeight: 800, color: 'white'
-          }}>P</div>
-          <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-secondary)' }}>PayGateway</span>
+          }}>G</div>
+          <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-secondary)' }}>GouPay</span>
         </div>
-        © {new Date().getFullYear()} PayGateway. Todos os direitos reservados.
+        © {new Date().getFullYear()} GouPay. Todos os direitos reservados.
       </footer>
     </div>
   );

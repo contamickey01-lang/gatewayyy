@@ -3,7 +3,7 @@ import "./globals.css";
 import { Toaster } from "react-hot-toast";
 
 export const metadata: Metadata = {
-  title: "PayGateway — Plataforma de Pagamentos",
+  title: "GouPay — Plataforma de Pagamentos",
   description: "Gateway de pagamentos e marketplace SaaS. Venda seus produtos online com checkout profissional, split de pagamentos e saques via Pix.",
   keywords: "gateway de pagamentos, marketplace, pix, cartão de crédito, split, vendas online",
 };

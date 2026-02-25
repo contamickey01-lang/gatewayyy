@@ -11,13 +11,13 @@
   --text-primary: #f0f0f5;
   --text-secondary: #8888a0;
   --text-muted: #55556a;
-  --accent-primary: #6c5ce7;
+  --accent-primary: #8e44ad;
   --accent-secondary: #a29bfe;
-  --accent-gradient: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 50%, #74b9ff 100%);
+  --accent-gradient: linear-gradient(135deg, #8e44ad 0%, #9b59b6 50%, #a29bfe 100%);
   --success: #00cec9;
   --warning: #fdcb6e;
   --danger: #ff6b6b;
-  --info: #74b9ff;
+  --info: #8e44ad;
 }
 
 * {
