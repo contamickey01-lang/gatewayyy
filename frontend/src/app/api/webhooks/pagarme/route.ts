@@ -39,6 +39,34 @@ export async function POST(req: NextRequest) {
                 newStatus = 'chargeback';
                 transactionType = 'refund';
                 break;
+            case 'transfer.paid':
+                // Update withdrawal status to completed
+                await supabase.from('withdrawals')
+                    .update({ status: 'completed', updated_at: new Date().toISOString() })
+                    .eq('pagarme_transfer_id', data.id);
+                return jsonSuccess({ received: true });
+            case 'transfer.failed':
+                // Update withdrawal status to failed
+                await supabase.from('withdrawals')
+                    .update({ status: 'failed', updated_at: new Date().toISOString() })
+                    .eq('pagarme_transfer_id', data.id);
+
+                // Also update the transaction status
+                const { data: withdrawal } = await supabase.from('withdrawals')
+                    .select('user_id, amount')
+                    .eq('pagarme_transfer_id', data.id)
+                    .single();
+
+                if (withdrawal) {
+                    await supabase.from('transactions')
+                        .update({ status: 'failed' })
+                        .eq('user_id', withdrawal.user_id)
+                        .eq('type', 'withdrawal')
+                        .eq('amount', withdrawal.amount)
+                        .order('created_at', { ascending: false })
+                        .limit(1);
+                }
+                return jsonSuccess({ received: true });
             default:
                 return jsonSuccess({ received: true });
         }

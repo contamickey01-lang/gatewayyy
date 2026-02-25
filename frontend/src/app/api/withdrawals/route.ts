@@ -55,7 +55,15 @@ export async function POST(req: NextRequest) {
 
         return jsonSuccess({ withdrawal }, 201);
     } catch (err: any) {
-        console.error('Withdrawal error:', err.response?.data || err.message);
-        return jsonError(err.response?.data?.message || 'Erro ao processar saque', 500);
+        const errorData = err.response?.data;
+        console.error('Withdrawal error:', JSON.stringify(errorData || err.message, null, 2));
+
+        // If it's a Pagar.me error, try to be more specific
+        let errorMessage = 'Erro ao processar saque';
+        if (errorData?.message) {
+            errorMessage = `Pagar.me: ${errorData.message}`;
+        }
+
+        return jsonError(errorMessage, 500);
     }
 }
