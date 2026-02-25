@@ -23,17 +23,19 @@ export async function GET(req: NextRequest) {
     let usedPagarme = false;
 
     // 1. Get stats from local Database (Baseline)
-    const [sales, fees, withdrawals, pending] = await Promise.all([
-        supabase.from('transactions').select('amount').eq('user_id', userId).eq('type', 'sale').eq('status', 'confirmed'),
+    const [ordersData, fees, withdrawals, pending] = await Promise.all([
+        supabase.from('orders').select('amount').eq('seller_id', userId).eq('status', 'paid'),
         supabase.from('transactions').select('amount').eq('user_id', userId).eq('type', 'fee'),
         supabase.from('transactions').select('amount').eq('user_id', userId).eq('type', 'withdrawal'),
         supabase.from('transactions').select('amount').eq('user_id', userId).eq('type', 'sale').eq('status', 'pending')
     ]);
 
-    totalSoldDec = (sales.data || []).reduce((s, t) => s + (t.amount || 0), 0) / 100;
+    totalSoldDec = (ordersData.data || []).reduce((s, t) => s + (t.amount || 0), 0) / 100;
     totalFeesDec = (fees.data || []).reduce((s, t) => s + (t.amount || 0), 0) / 100;
     totalWithdrawnDec = (withdrawals.data || []).reduce((s, t) => s + (t.amount || 0), 0) / 100;
     pendingDec = (pending.data || []).reduce((s, t) => s + (t.amount || 0), 0) / 100;
+
+    // Initial available balance is Gross - Fees - Withdrawn
     availableDec = totalSoldDec - totalFeesDec - totalWithdrawnDec;
 
     // 2. Overlay with real-time Pagar.me balance if available
@@ -43,7 +45,6 @@ export async function GET(req: NextRequest) {
     if (recipient?.pagarme_recipient_id) {
         try {
             const balance = await PagarmeService.getRecipientBalance(recipient.pagarme_recipient_id);
-            // console.log('Live Balance:', JSON.stringify(balance, null, 2));
 
             const getAmount = (field: any) => {
                 if (!field) return 0;
@@ -54,7 +55,7 @@ export async function GET(req: NextRequest) {
                 return field.amount || 0;
             };
 
-            // Use Pagar.me values for these specific fields if successful
+            // Use Pagar.me values AS-IS (they are already net from splits)
             availableDec = getAmount(balance.available) / 100;
             pendingDec = getAmount(balance.waiting_funds) / 100;
             totalWithdrawnDec = getAmount(balance.transferred) / 100;

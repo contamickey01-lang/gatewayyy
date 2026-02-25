@@ -21,7 +21,10 @@ export async function GET(req: NextRequest) {
 
                 const getAmount = (field: any) => {
                     if (!field) return 0;
-                    if (Array.isArray(field)) return field[0]?.amount || 0;
+                    if (Array.isArray(field)) {
+                        const item = field.find((i: any) => i.amount !== undefined) || field[0];
+                        return item?.amount || 0;
+                    }
                     return field.amount || 0;
                 };
 
@@ -29,7 +32,7 @@ export async function GET(req: NextRequest) {
                 const pending = getAmount(balance.waiting_funds);
                 const transferred = getAmount(balance.transferred);
 
-                // Also fetch total sold from orders for reference (not provided by balance API directly)
+                // Fetch total sold from orders (Gross)
                 const { data: orders } = await supabase
                     .from('orders').select('amount').eq('seller_id', auth.user.id).eq('status', 'paid');
                 const totalSold = (orders || []).reduce((sum, o) => sum + (o.amount || 0), 0);
