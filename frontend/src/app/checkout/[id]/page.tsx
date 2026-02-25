@@ -1,18 +1,23 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useEffect, useState, useRef } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import { productsAPI, checkoutAPI } from '@/lib/api';
 import toast from 'react-hot-toast';
-import { FiShoppingCart, FiCreditCard, FiSmartphone, FiCheck, FiCopy, FiPackage } from 'react-icons/fi';
+import { FiShoppingCart, FiCreditCard, FiSmartphone, FiCheck, FiCopy, FiPackage, FiArrowRight } from 'react-icons/fi';
 
 export default function CheckoutPage() {
     const params = useParams();
+    const router = useRouter();
     const [product, setProduct] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [processing, setProcessing] = useState(false);
     const [paymentMethod, setPaymentMethod] = useState('pix');
     const [result, setResult] = useState<any>(null);
+    const [pixPaid, setPixPaid] = useState(false);
+    const pollingRef = useRef<any>(null);
+    const [countdown, setCountdown] = useState(5);
+    const countdownRef = useRef<any>(null);
     const [form, setForm] = useState({
         name: '', email: '', cpf: '', phone: '',
         card_number: '', card_holder: '', card_exp_month: '', card_exp_year: '', card_cvv: '', installments: 1
@@ -20,6 +25,10 @@ export default function CheckoutPage() {
 
     useEffect(() => {
         if (params.id) loadProduct(params.id as string);
+        return () => {
+            if (pollingRef.current) clearInterval(pollingRef.current);
+            if (countdownRef.current) clearInterval(countdownRef.current);
+        };
     }, [params.id]);
 
     const loadProduct = async (id: string) => {
@@ -31,6 +40,42 @@ export default function CheckoutPage() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const autoLoginAndRedirect = (authData: any) => {
+        if (authData?.token && authData?.user) {
+            localStorage.setItem('token', authData.token);
+            localStorage.setItem('user', JSON.stringify(authData.user));
+        }
+        // Start countdown to redirect
+        let count = 5;
+        setCountdown(count);
+        countdownRef.current = setInterval(() => {
+            count--;
+            setCountdown(count);
+            if (count <= 0) {
+                clearInterval(countdownRef.current);
+                router.push('/area-membros');
+            }
+        }, 1000);
+    };
+
+    const startPixPolling = (orderId: string) => {
+        pollingRef.current = setInterval(async () => {
+            try {
+                const { data } = await checkoutAPI.getOrderStatus(orderId);
+                if (data.order?.status === 'paid') {
+                    clearInterval(pollingRef.current);
+                    setPixPaid(true);
+                    toast.success('Pagamento confirmado! 🎉');
+                    if (data.auth) {
+                        autoLoginAndRedirect(data.auth);
+                    }
+                }
+            } catch (err) {
+                // Silently retry
+            }
+        }, 3000);
     };
 
     const handlePay = async (e: React.FormEvent) => {
@@ -61,7 +106,16 @@ export default function CheckoutPage() {
 
             const { data } = await checkoutAPI.pay(payload);
             setResult(data);
-            toast.success(paymentMethod === 'pix' ? 'QR Code gerado!' : 'Pagamento processado!');
+
+            if (data.order?.status === 'paid') {
+                toast.success('Pagamento aprovado! 🎉');
+                if (data.auth) {
+                    autoLoginAndRedirect(data.auth);
+                }
+            } else if (paymentMethod === 'pix') {
+                toast.success('QR Code gerado!');
+                startPixPolling(data.order.id);
+            }
         } catch (err: any) {
             toast.error(err.response?.data?.error || 'Erro ao processar pagamento');
         } finally {
@@ -99,61 +153,118 @@ export default function CheckoutPage() {
         );
     }
 
-    // Success / PIX QR Code screen
-    if (result) {
+    // Success Screen (Credit Card instant or PIX confirmed)
+    if (result && (result.order?.status === 'paid' || pixPaid)) {
+        return (
+            <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)', padding: 24 }}>
+                <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: 500, padding: 48, textAlign: 'center' }}>
+                    {/* Success animation */}
+                    <div style={{
+                        width: 80, height: 80, borderRadius: '50%', margin: '0 auto 24px',
+                        background: 'rgba(0,206,201,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        animation: 'scaleIn 0.5s ease'
+                    }}>
+                        <FiCheck size={40} style={{ color: 'var(--success)' }} />
+                    </div>
+
+                    <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 8 }}>
+                        Pagamento <span className="gradient-text">Confirmado!</span>
+                    </h2>
+                    <p style={{ color: 'var(--text-secondary)', marginBottom: 8, fontSize: 15 }}>
+                        Seu pagamento foi processado com sucesso.
+                    </p>
+                    <p style={{ color: 'var(--text-muted)', marginBottom: 24, fontSize: 13 }}>
+                        Seu acesso ao produto já está disponível no Painel do Aluno.
+                    </p>
+
+                    <div className="stat-card" style={{ marginBottom: 24 }}>
+                        <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 4 }}>Valor pago</div>
+                        <div style={{ fontSize: 32, fontWeight: 700 }} className="gradient-text">R$ {result.order.amount_display}</div>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        <button
+                            className="btn-primary animate-pulse-glow"
+                            onClick={() => router.push('/area-membros')}
+                            style={{
+                                width: '100%', padding: '16px', fontSize: 15,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                                border: 'none', cursor: 'pointer'
+                            }}
+                        >
+                            Acessar Painel do Aluno <FiArrowRight size={18} />
+                        </button>
+                        <p style={{ color: 'var(--text-muted)', fontSize: 12 }}>
+                            Redirecionando automaticamente em {countdown}s...
+                        </p>
+                    </div>
+                </div>
+                <style jsx>{`
+                    @keyframes scaleIn {
+                        from { transform: scale(0); opacity: 0; }
+                        to { transform: scale(1); opacity: 1; }
+                    }
+                `}</style>
+            </div>
+        );
+    }
+
+    // PIX QR Code screen (waiting for payment)
+    if (result && result.pix) {
         return (
             <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)', padding: 24 }}>
                 <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: 480, padding: 40, textAlign: 'center' }}>
-                    {result.order?.status === 'paid' ? (
-                        <>
-                            <div style={{
-                                width: 64, height: 64, borderRadius: '50%', margin: '0 auto 20px',
-                                background: 'rgba(0,206,201,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center'
-                            }}>
-                                <FiCheck size={32} style={{ color: 'var(--success)' }} />
-                            </div>
-                            <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>Pagamento Aprovado!</h2>
-                            <p style={{ color: 'var(--text-secondary)', marginBottom: 16 }}>Seu pagamento foi processado com sucesso.</p>
-                            <div className="stat-card" style={{ marginTop: 20 }}>
-                                <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 4 }}>Valor pago</div>
-                                <div style={{ fontSize: 28, fontWeight: 700 }} className="gradient-text">R$ {result.order.amount_display}</div>
-                            </div>
-                        </>
-                    ) : (
-                        <>
-                            <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>Pague via Pix</h2>
-                            <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 24 }}>
-                                Escaneie o QR Code ou copie o código abaixo
-                            </p>
-                            {result.pix?.qr_code_url && (
-                                <div style={{
-                                    background: 'white', borderRadius: 16, padding: 16,
-                                    display: 'inline-block', marginBottom: 20
-                                }}>
-                                    <img src={result.pix.qr_code_url} alt="QR Code Pix" style={{ width: 220, height: 220 }} />
-                                </div>
-                            )}
-                            <div style={{ marginBottom: 20 }}>
-                                <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 8 }}>Valor</div>
-                                <div style={{ fontSize: 28, fontWeight: 700 }} className="gradient-text">R$ {result.order.amount_display}</div>
-                            </div>
-                            {result.pix?.qr_code && (
-                                <div>
-                                    <div style={{
-                                        background: 'var(--bg-secondary)', borderRadius: 10, padding: '12px 16px',
-                                        fontSize: 12, color: 'var(--text-muted)', wordBreak: 'break-all',
-                                        maxHeight: 80, overflow: 'auto', marginBottom: 12
-                                    }}>
-                                        {result.pix.qr_code}
-                                    </div>
-                                    <button className="btn-primary" onClick={copyPixCode} style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                                        <FiCopy size={14} /> Copiar Pix Copia e Cola
-                                    </button>
-                                </div>
-                            )}
-                        </>
+                    <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>Pague via Pix</h2>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 24 }}>
+                        Escaneie o QR Code ou copie o código abaixo
+                    </p>
+                    {result.pix?.qr_code_url && (
+                        <div style={{
+                            background: 'white', borderRadius: 16, padding: 16,
+                            display: 'inline-block', marginBottom: 20
+                        }}>
+                            <img src={result.pix.qr_code_url} alt="QR Code Pix" style={{ width: 220, height: 220 }} />
+                        </div>
                     )}
+                    <div style={{ marginBottom: 20 }}>
+                        <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 8 }}>Valor</div>
+                        <div style={{ fontSize: 28, fontWeight: 700 }} className="gradient-text">R$ {result.order.amount_display}</div>
+                    </div>
+                    {result.pix?.qr_code && (
+                        <div>
+                            <div style={{
+                                background: 'var(--bg-secondary)', borderRadius: 10, padding: '12px 16px',
+                                fontSize: 12, color: 'var(--text-muted)', wordBreak: 'break-all',
+                                maxHeight: 80, overflow: 'auto', marginBottom: 12
+                            }}>
+                                {result.pix.qr_code}
+                            </div>
+                            <button className="btn-primary" onClick={copyPixCode} style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                                <FiCopy size={14} /> Copiar Pix Copia e Cola
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Polling indicator */}
+                    <div style={{
+                        marginTop: 24, padding: '16px', borderRadius: 12,
+                        background: 'rgba(108,92,231,0.08)', border: '1px solid rgba(108,92,231,0.2)'
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 13, color: 'var(--accent-secondary)' }}>
+                            <div style={{
+                                width: 8, height: 8, borderRadius: '50%', background: 'var(--accent-primary)',
+                                animation: 'pulse 1.5s ease infinite'
+                            }} />
+                            Aguardando confirmação do pagamento...
+                        </div>
+                    </div>
                 </div>
+                <style jsx>{`
+                    @keyframes pulse {
+                        0%, 100% { opacity: 1; transform: scale(1); }
+                        50% { opacity: 0.4; transform: scale(0.8); }
+                    }
+                `}</style>
             </div>
         );
     }

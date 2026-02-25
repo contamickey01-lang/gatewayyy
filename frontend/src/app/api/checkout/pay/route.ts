@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest } from 'next/server';
 import { supabase } from '@/lib/db';
 import { PagarmeService } from '@/lib/pagarme';
-import { jsonError, jsonSuccess } from '@/lib/auth';
+import { jsonError, jsonSuccess, generateToken, hashPassword } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function POST(req: NextRequest) {
@@ -54,6 +54,7 @@ export async function POST(req: NextRequest) {
         await supabase.from('orders').insert({
             id: orderId, seller_id: product.user_id, product_id: product.id,
             buyer_name: buyer.name, buyer_email: buyer.email, buyer_cpf: buyer.cpf,
+            customer_email: buyer.email, customer_name: buyer.name,
             amount: product.price, amount_display: product.price_display,
             payment_method, status: charge?.status === 'paid' ? 'paid' : 'pending',
             pagarme_order_id: order.id, pagarme_charge_id: charge?.id
@@ -69,6 +70,7 @@ export async function POST(req: NextRequest) {
         });
 
         // If paid immediately, create fee transaction and update sales count
+        let buyerUser: any = null;
         if (charge?.status === 'paid') {
             const feeAmount = Math.round(product.price * (feePercentage / 100));
 
@@ -82,12 +84,52 @@ export async function POST(req: NextRequest) {
             await supabase.from('products')
                 .update({ sales_count: (product.sales_count || 0) + 1 })
                 .eq('id', product.id);
+
+            // AUTO-ENROLLMENT: Find or create buyer user and enroll them
+            const { data: existingUser } = await supabase
+                .from('users').select('id, name, email, role').eq('email', buyer.email.toLowerCase()).single();
+
+            if (existingUser) {
+                buyerUser = existingUser;
+            } else {
+                // Create new customer account
+                const newUserId = uuidv4();
+                const tempPassword = uuidv4().substring(0, 12);
+                const hashedPw = await hashPassword(tempPassword);
+                const { data: newUser, error: createErr } = await supabase.from('users').insert({
+                    id: newUserId,
+                    email: buyer.email.toLowerCase(),
+                    name: buyer.name,
+                    role: 'customer',
+                    password_hash: hashedPw
+                }).select('id, name, email, role').single();
+                if (!createErr && newUser) buyerUser = newUser;
+            }
+
+            if (buyerUser) {
+                // Enroll buyer in the product
+                await supabase.from('enrollments').upsert({
+                    user_id: buyerUser.id,
+                    product_id: product.id,
+                    order_id: orderId,
+                    status: 'active'
+                }, { onConflict: 'user_id, product_id' });
+            }
         }
 
         // Build response
         const response: any = {
             order: { id: orderId, status: charge?.status || 'pending', amount_display: product.price_display }
         };
+
+        // If paid immediately, include auto-login token for buyer
+        if (charge?.status === 'paid' && buyerUser) {
+            const token = generateToken({ id: buyerUser.id, email: buyerUser.email, role: buyerUser.role });
+            response.auth = {
+                token,
+                user: { id: buyerUser.id, name: buyerUser.name, email: buyerUser.email, role: buyerUser.role }
+            };
+        }
 
         if (payment_method === 'pix' && charge?.last_transaction) {
             response.pix = {
