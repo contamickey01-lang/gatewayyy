@@ -92,7 +92,7 @@ export default function ContactPage() {
                             Gerente de Contas
                         </span>
                         <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 12 }}>
-                            Lucas
+                            Goulart
                         </h2>
                         <a
                             href={whatsappUrl}
