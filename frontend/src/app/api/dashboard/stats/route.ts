@@ -22,38 +22,45 @@ export async function GET(req: NextRequest) {
     let totalFeesDec = 0;
     let usedPagarme = false;
 
-    // Try to get live balance from Pagar.me
+    // 1. Get stats from local Database (Baseline)
+    const [sales, fees, withdrawals, pending] = await Promise.all([
+        supabase.from('transactions').select('amount').eq('user_id', userId).eq('type', 'sale').eq('status', 'confirmed'),
+        supabase.from('transactions').select('amount').eq('user_id', userId).eq('type', 'fee'),
+        supabase.from('transactions').select('amount').eq('user_id', userId).eq('type', 'withdrawal'),
+        supabase.from('transactions').select('amount').eq('user_id', userId).eq('type', 'sale').eq('status', 'pending')
+    ]);
+
+    totalSoldDec = (sales.data || []).reduce((s, t) => s + (t.amount || 0), 0) / 100;
+    totalFeesDec = (fees.data || []).reduce((s, t) => s + (t.amount || 0), 0) / 100;
+    totalWithdrawnDec = (withdrawals.data || []).reduce((s, t) => s + (t.amount || 0), 0) / 100;
+    pendingDec = (pending.data || []).reduce((s, t) => s + (t.amount || 0), 0) / 100;
+    availableDec = totalSoldDec - totalFeesDec - totalWithdrawnDec;
+
+    // 2. Overlay with real-time Pagar.me balance if available
     const { data: recipient } = await supabase
         .from('recipients').select('pagarme_recipient_id').eq('user_id', userId).single();
 
     if (recipient?.pagarme_recipient_id) {
         try {
             const balance = await PagarmeService.getRecipientBalance(recipient.pagarme_recipient_id);
-            // console.log(`Balance for recipient ${recipient.pagarme_recipient_id}:`, JSON.stringify(balance, null, 2));
+            // console.log('Live Balance:', JSON.stringify(balance, null, 2));
 
-            // Helper to get amount regardless of structure (array or object)
             const getAmount = (field: any) => {
                 if (!field) return 0;
                 if (Array.isArray(field)) {
-                    // Sometimes v5 returns an array for available/pending in some contexts
                     const item = field.find((i: any) => i.amount !== undefined) || field[0];
                     return item?.amount || 0;
                 }
                 return field.amount || 0;
             };
 
+            // Use Pagar.me values for these specific fields if successful
             availableDec = getAmount(balance.available) / 100;
             pendingDec = getAmount(balance.waiting_funds) / 100;
             totalWithdrawnDec = getAmount(balance.transferred) / 100;
-
-            // Fetch total sold from orders (Pagar.me balance doesn't show history)
-            const { data: salesData } = await supabase
-                .from('orders').select('amount').eq('seller_id', userId).eq('status', 'paid');
-
-            totalSoldDec = (salesData || []).reduce((s, t) => s + (t.amount || 0), 0) / 100;
             usedPagarme = true;
         } catch (pErr: any) {
-            console.error('Pagar.me balance error:', pErr.response?.data || pErr.message);
+            console.error('Pagar.me balance error in stats:', pErr.response?.data || pErr.message);
         }
     }
 
