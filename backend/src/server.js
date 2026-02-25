@@ -15,6 +15,8 @@ const webhookRoutes = require('./routes/webhook.routes');
 const withdrawalRoutes = require('./routes/withdrawal.routes');
 const adminRoutes = require('./routes/admin.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
+const contentRoutes = require('./routes/content.routes');
+const memberRoutes = require('./routes/member.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -68,6 +70,8 @@ app.use('/api/webhooks', webhookRoutes);
 app.use('/api/withdrawals', withdrawalRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/content', contentRoutes);
+app.use('/api/member', memberRoutes);
 
 // 404 handler
 app.use((req, res) => {

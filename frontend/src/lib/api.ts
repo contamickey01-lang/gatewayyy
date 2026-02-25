@@ -79,4 +79,24 @@ export const adminAPI = {
     updateFees: (fee_percentage: number) => api.put('/admin/settings/fees', { fee_percentage }),
 };
 
+// Content (Seller Side)
+export const contentAPI = {
+    listModules: (productId: string) => api.get(`/content/${productId}/modules`),
+    createModule: (productId: string, data: any) => api.post(`/content/${productId}/modules`, data),
+    updateModule: (moduleId: string, data: any) => api.put(`/content/modules/${moduleId}`, data),
+    deleteModule: (moduleId: string) => api.delete(`/content/modules/${moduleId}`),
+
+    listLessons: (moduleId: string) => api.get(`/content/modules/${moduleId}/lessons`),
+    createLesson: (moduleId: string, data: any) => api.post(`/content/modules/${moduleId}/lessons`, data),
+    updateLesson: (lessonId: string, data: any) => api.put(`/content/lessons/${lessonId}`, data),
+    deleteLesson: (lessonId: string) => api.delete(`/content/lessons/${lessonId}`),
+};
+
+// Member Area (Student Side)
+export const memberAPI = {
+    listMyProducts: () => api.get('/member/my-products'),
+    getCourseContent: (productId: string) => api.get(`/member/course/${productId}`),
+    getLesson: (lessonId: string) => api.get(`/member/lesson/${lessonId}`),
+};
+
 export default api;

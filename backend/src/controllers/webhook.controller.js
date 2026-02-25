@@ -85,7 +85,7 @@ class WebhookController {
         if (order.product_id) {
             const { data: product } = await supabase
                 .from('products')
-                .select('sales_count')
+                .select('sales_count, type')
                 .eq('id', order.product_id)
                 .single();
 
@@ -93,6 +93,50 @@ class WebhookController {
                 .from('products')
                 .update({ sales_count: (product?.sales_count || 0) + 1 })
                 .eq('id', order.product_id);
+
+            // AUTO-ENROLLMENT for digital products
+            if (product?.type === 'digital' && order.buyer_email) {
+                try {
+                    // 1. Check if user already exists
+                    let { data: user } = await supabase
+                        .from('users')
+                        .select('id')
+                        .eq('email', order.buyer_email)
+                        .single();
+
+                    // 2. Create user if doesn't exist
+                    if (!user) {
+                        const { data: newUser, error: createError } = await supabase
+                            .from('users')
+                            .insert({
+                                name: order.buyer_name || 'Estudante',
+                                email: order.buyer_email,
+                                password_hash: 'INITIAL_PAYMENT_PENDING_SET', // Needs password reset/init
+                                role: 'customer',
+                                status: 'active'
+                            })
+                            .select()
+                            .single();
+
+                        if (!createError) user = newUser;
+                    }
+
+                    // 3. Create enrollment
+                    if (user) {
+                        await supabase
+                            .from('enrollments')
+                            .upsert({
+                                user_id: user.id,
+                                product_id: order.product_id,
+                                order_id: order.id,
+                                status: 'active'
+                            });
+                        console.log(`Auto-enrolled ${order.buyer_email} to product ${order.product_id}`);
+                    }
+                } catch (enrollErr) {
+                    console.error('Auto-enrollment failed:', enrollErr.message);
+                }
+            }
         }
 
         console.log(`Order ${order.id} paid. Seller: R$${(sellerAmount / 100).toFixed(2)}, Fee: R$${(feeAmount / 100).toFixed(2)}`);

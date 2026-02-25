@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { productsAPI } from '@/lib/api';
 import toast from 'react-hot-toast';
-import { FiPlus, FiEdit2, FiTrash2, FiCopy, FiPackage, FiX, FiUpload, FiImage } from 'react-icons/fi';
+import { FiPlus, FiEdit2, FiTrash2, FiCopy, FiPackage, FiX, FiUpload, FiImage, FiBook } from 'react-icons/fi';
 import axios from 'axios';
 
 export default function ProductsPage() {
@@ -189,6 +190,9 @@ export default function ProductsPage() {
                                     <button onClick={() => copyCheckoutLink(product.id)} className="btn-secondary" style={{ flex: 1, padding: '8px 12px', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                                         <FiCopy size={13} /> Link Checkout
                                     </button>
+                                    <Link href={`/dashboard/products/${product.id}/content`} className="btn-secondary" style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Gerenciar Conteúdo">
+                                        <FiBook size={14} />
+                                    </Link>
                                     <button onClick={() => openEdit(product)} className="btn-secondary" style={{ padding: '8px 12px' }}>
                                         <FiEdit2 size={14} />
                                     </button>

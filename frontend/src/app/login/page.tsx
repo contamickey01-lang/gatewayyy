@@ -22,6 +22,8 @@ export default function LoginPage() {
             toast.success('Login realizado com sucesso!');
             if (data.user.role === 'admin') {
                 router.push('/admin');
+            } else if (data.user.role === 'customer') {
+                router.push('/area-membros');
             } else {
                 router.push('/dashboard');
             }
@@ -52,7 +54,7 @@ export default function LoginPage() {
                         width: 48, height: 48, borderRadius: 14, margin: '0 auto 16px',
                         background: 'var(--accent-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontSize: 22, fontWeight: 800, color: 'white'
-                    }}>P</div>
+                    }}>G</div>
                     <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>Bem-vindo de volta</h1>
                     <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>Entre na sua conta para continuar</p>
                 </div>
