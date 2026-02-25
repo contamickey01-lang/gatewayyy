@@ -54,7 +54,6 @@ export async function POST(req: NextRequest) {
         await supabase.from('orders').insert({
             id: orderId, seller_id: product.user_id, product_id: product.id,
             buyer_name: buyer.name, buyer_email: buyer.email, buyer_cpf: buyer.cpf,
-            customer_email: buyer.email, customer_name: buyer.name,
             amount: product.price, amount_display: product.price_display,
             payment_method, status: charge?.status === 'paid' ? 'paid' : 'pending',
             pagarme_order_id: order.id, pagarme_charge_id: charge?.id
