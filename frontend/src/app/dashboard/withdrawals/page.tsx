@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { withdrawalsAPI } from '@/lib/api';
+import { withdrawalsAPI, authAPI } from '@/lib/api';
 import toast from 'react-hot-toast';
-import { FiDollarSign, FiArrowDown, FiClock, FiCheckCircle, FiXCircle, FiInfo } from 'react-icons/fi';
+import { FiDollarSign, FiArrowDown, FiClock, FiCheckCircle, FiXCircle, FiInfo, FiLock, FiAlertTriangle } from 'react-icons/fi';
 
 export default function WithdrawalsPage() {
     const [balance, setBalance] = useState<any>(null);
@@ -11,6 +11,7 @@ export default function WithdrawalsPage() {
     const [loading, setLoading] = useState(true);
     const [amount, setAmount] = useState('');
     const [requesting, setRequesting] = useState(false);
+    const [verifying, setVerifying] = useState(false);
 
     useEffect(() => {
         loadData();
@@ -28,6 +29,21 @@ export default function WithdrawalsPage() {
             console.error(err);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleVerify = async () => {
+        setVerifying(true);
+        try {
+            const { data } = await authAPI.getKycLink();
+            if (data.url) {
+                window.open(data.url, '_blank');
+                toast.success('Link de verificação aberto em nova aba!');
+            }
+        } catch (err: any) {
+            toast.error(err.response?.data?.error || 'Erro ao gerar link de verificação');
+        } finally {
+            setVerifying(false);
         }
     };
 
@@ -65,9 +81,56 @@ export default function WithdrawalsPage() {
         );
     }
 
+    const needsVerification = balance?.recipient_status !== 'active';
+
     return (
         <div className="animate-fade-in">
             <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 28 }}>Saques</h1>
+
+            {/* Verification Notice */}
+            {needsVerification && (
+                <div className="glass-card" style={{
+                    padding: 24,
+                    marginBottom: 32,
+                    border: '1px solid rgba(255, 171, 0, 0.2)',
+                    background: 'linear-gradient(135deg, rgba(255, 171, 0, 0.1) 0%, rgba(255, 107, 107, 0.05) 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 20,
+                    flexWrap: 'wrap'
+                }}>
+                    <div style={{ display: 'flex', gap: 16, alignItems: 'center', flex: 1 }}>
+                        <div style={{
+                            width: 48, height: 48, borderRadius: 12,
+                            background: 'rgba(255, 171, 0, 0.2)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            color: '#ffab00'
+                        }}>
+                            <FiLock size={24} />
+                        </div>
+                        <div>
+                            <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4, color: '#fff' }}>Ative a movimentação do seu saldo</h3>
+                            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: 1.5, maxWidth: 500 }}>
+                                Para liberar saques e movimentar seu saldo, o Pagar.me exige a verificação de identidade (foto do documento e rosto).
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        className="btn-primary"
+                        onClick={handleVerify}
+                        disabled={verifying}
+                        style={{
+                            background: '#ffab00',
+                            color: '#000',
+                            fontWeight: 700,
+                            padding: '12px 24px'
+                        }}
+                    >
+                        {verifying ? 'Gerando link...' : 'Fazer Verificação Agora'}
+                    </button>
+                </div>
+            )}
 
             {/* Balance Cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 16, marginBottom: 32 }}>
@@ -90,7 +153,23 @@ export default function WithdrawalsPage() {
             </div>
 
             {/* Withdraw Form */}
-            <div className="glass-card" style={{ padding: 28, marginBottom: 32 }}>
+            <div className={`glass-card ${needsVerification ? 'disabled-section' : ''}`} style={{
+                padding: 28,
+                marginBottom: 32,
+                opacity: needsVerification ? 0.6 : 1,
+                pointerEvents: needsVerification ? 'none' : 'auto',
+                position: 'relative'
+            }}>
+                {needsVerification && (
+                    <div style={{
+                        position: 'absolute', inset: 0, zIndex: 10, display: 'flex',
+                        alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.1)', borderRadius: 16
+                    }}>
+                        <div style={{ background: '#1a1a1a', padding: '8px 16px', borderRadius: 20, fontSize: 12, fontWeight: 600, color: '#ffab00', border: '1px solid #ffab00' }}>
+                            <FiLock size={12} style={{ marginRight: 6 }} /> Verificação pendente
+                        </div>
+                    </div>
+                )}
                 <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 20 }}>Solicitar Saque via Pix</h3>
                 <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: 20 }}>
                     <div style={{ flex: 1, minWidth: 200 }}>
@@ -98,7 +177,7 @@ export default function WithdrawalsPage() {
                         <input type="number" step="0.01" min="5" className="input-field" placeholder="0.00"
                             value={amount} onChange={e => setAmount(e.target.value)} />
                     </div>
-                    <button className="btn-primary" onClick={handleWithdraw} disabled={requesting}
+                    <button className="btn-primary" onClick={handleWithdraw} disabled={requesting || needsVerification}
                         style={{ padding: '14px 32px', display: 'flex', alignItems: 'center', gap: 8 }}>
                         <FiArrowDown size={16} />
                         {requesting ? 'Processando...' : 'Solicitar Saque'}

@@ -147,6 +147,11 @@ export class PagarmeService {
         const response = await pagarmeApi.get(`/orders/${orderId}`);
         return response.data;
     }
+
+    static async createKycLink(recipientId: string) {
+        const response = await pagarmeApi.post(`/recipients/${recipientId}/kyc_link`);
+        return response.data;
+    }
 }
 
 export default pagarmeApi;

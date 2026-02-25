@@ -32,6 +32,9 @@ export async function GET(req: NextRequest) {
                 const pending = balance.waiting_funds_amount !== undefined ? balance.waiting_funds_amount : getAmount(balance.waiting_funds);
                 const transferred = balance.transferred_amount !== undefined ? balance.transferred_amount : getAmount(balance.transferred);
 
+                // Fetch recipient status for KYC check
+                const pRecipient = await PagarmeService.getRecipient(recipient.pagarme_recipient_id);
+
                 // Fetch total sold from orders (Gross)
                 const { data: orders } = await supabase
                     .from('orders').select('amount').eq('seller_id', auth.user.id).eq('status', 'paid');
@@ -42,6 +45,8 @@ export async function GET(req: NextRequest) {
                     pending: (pending / 100).toFixed(2),
                     total_sold: (totalSold / 100).toFixed(2),
                     total_withdrawn: (transferred / 100).toFixed(2),
+                    recipient_status: pRecipient.status,
+                    kyc_status: pRecipient.kyc_details?.status || 'none'
                 });
             } catch (pErr: any) {
                 console.error('Pagar.me balance error in withdrawals API:', pErr.response?.data || pErr.message);

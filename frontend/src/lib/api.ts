@@ -39,6 +39,7 @@ export const authAPI = {
     resetPassword: (data: any) => api.post('/auth/reset-password', data),
     getProfile: () => api.get('/auth/profile'),
     updateProfile: (data: any) => api.put('/auth/profile', data),
+    getKycLink: () => api.post('/auth/recipient/kyc'),
 };
 
 // Products
