@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { contentAPI, productsAPI } from '@/lib/api';
@@ -242,8 +243,8 @@ export default function ContentEditorPage() {
             )}
 
             {/* Module Modal */}
-            {showModuleModal && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+            {showModuleModal && createPortal(
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
                     <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: 500, padding: 40 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24 }}>
                             <h3 style={{ fontSize: 18, fontWeight: 700 }}>{editingModule ? 'Editar Módulo' : 'Novo Módulo'}</h3>
@@ -261,12 +262,13 @@ export default function ContentEditorPage() {
                             <button className="btn-primary" style={{ width: '100%' }}>Salvar Módulo</button>
                         </form>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* Lesson Modal */}
-            {showLessonModal && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+            {showLessonModal && createPortal(
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
                     <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: 650, padding: 40, maxHeight: '90vh', overflowY: 'auto' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24 }}>
                             <h3 style={{ fontSize: 18, fontWeight: 700 }}>{editingLesson ? 'Editar Aula' : 'Nova Aula'}</h3>
@@ -292,7 +294,8 @@ export default function ContentEditorPage() {
                             <button className="btn-primary" style={{ width: '100%' }}>Salvar Aula</button>
                         </form>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             <style jsx>{`
