@@ -6,11 +6,8 @@ import { getAuthUser, jsonError, jsonSuccess } from '@/lib/auth';
 import { PagarmeService } from '@/lib/pagarme';
 
 export async function GET(req: NextRequest) {
-    const auth = await getAuthUser(req);
-    if (!auth) return jsonError('Não autorizado', 401);
-
     const { data: recipient } = await supabase
-        .from('recipients').select('pagarme_recipient_id').eq('user_id', auth.user.id).single();
+        .from('recipients').select('pagarme_recipient_id').limit(1).single();
 
     if (!recipient?.pagarme_recipient_id) {
         return jsonError('Recebedor não encontrado no banco', 404);
@@ -23,9 +20,11 @@ export async function GET(req: NextRequest) {
             raw_balance: balance
         });
     } catch (err: any) {
-        return jsonError({
+        const errorData = err.response?.data || err.message;
+        return jsonSuccess({
+            status: 'ERROR',
             message: 'Erro ao buscar saldo no Pagar.me',
-            error: err.response?.data || err.message
+            details: errorData
         });
     }
 }
