@@ -30,6 +30,14 @@ export async function POST(req: NextRequest) {
         const feePercentage = parseFloat(process.env.PLATFORM_FEE_PERCENTAGE || '3');
 
         // Create Pagar.me order
+        const platformRecipientId = process.env.PLATFORM_RECIPIENT_ID;
+        console.log('DEBUG PIX GENERATION:', {
+            seller_recipient_id: recipient.pagarme_recipient_id,
+            platform_recipient_id: platformRecipientId,
+            seller_percentage: 100 - feePercentage,
+            platform_percentage: feePercentage
+        });
+
         const order = await PagarmeService.createOrder({
             amount: product.price,
             payment_method,
