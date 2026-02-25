@@ -7,7 +7,7 @@ import { PagarmeService } from '@/lib/pagarme';
 
 export async function GET(req: NextRequest) {
     const auth = await getAuthUser(req);
-    if (!auth || auth.user.role !== 'admin') return jsonError('Não autorizado', 403);
+    if (!auth) return jsonError('Não autorizado', 401);
 
     const platformRecipientId = process.env.PLATFORM_RECIPIENT_ID;
     const results: any = {
