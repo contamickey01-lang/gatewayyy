@@ -41,7 +41,7 @@ export default function FeesPage() {
             </div>
 
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20, marginBottom: 32 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 400px))', gap: 20, marginBottom: 32, justifyContent: 'center' }}>
                 {fees.map((fee, i) => (
                     <div key={i} className="glass-card" style={{ padding: 24 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
@@ -62,7 +62,7 @@ export default function FeesPage() {
                                 <span style={{ fontWeight: 600 }}>{fee.platform}</span>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
-                                <span style={{ color: 'var(--text-muted)' }}>Taxa Gateway (Pagar.me)</span>
+                                <span style={{ color: 'var(--text-muted)' }}>Taxa Gateway</span>
                                 <span style={{ fontWeight: 600 }}>{fee.gateway}</span>
                             </div>
                             <div style={{ height: 1, background: 'var(--border-color)', margin: '4px 0' }} />
