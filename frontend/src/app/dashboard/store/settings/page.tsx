@@ -23,13 +23,15 @@ export default function StoreSettingsPage() {
     const loadProfile = async () => {
         try {
             const { data } = await authAPI.getProfile();
+            const user = data.user || data; // Handle both {user} and direct object structures
+
             setForm({
-                store_active: data.store_active || false,
-                store_name: data.store_name || '',
-                store_slug: data.store_slug || '',
-                store_description: data.store_description || '',
-                store_theme: data.store_theme || 'light',
-                store_banner_url: data.store_banner_url || ''
+                store_active: user.store_active || false,
+                store_name: user.store_name || '',
+                store_slug: user.store_slug || '',
+                store_description: user.store_description || '',
+                store_theme: user.store_theme || 'light',
+                store_banner_url: user.store_banner_url || ''
             });
         } catch (error) {
             toast.error('Erro ao carregar configurações da loja');
@@ -43,7 +45,10 @@ export default function StoreSettingsPage() {
     const handleSave = async () => {
         setSaving(true);
         try {
-            await authAPI.updateProfile(form);
+            const { data } = await authAPI.updateProfile(form);
+            if (data.user) {
+                localStorage.setItem('user', JSON.stringify(data.user));
+            }
             toast.success('Configurações da loja salvas com sucesso!');
         } catch (error: any) {
             toast.error(error.response?.data?.error || 'Erro ao salvar loja');
