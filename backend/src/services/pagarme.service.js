@@ -43,7 +43,8 @@ class PagarmeService {
     }
 
     /**
-     * Create an order with multiple items and split rules
+     * Create an order with multiple items and split rules (Cart)
+     * Expects price in real float values from items array
      */
     async createMultiItemOrder({ items, buyer, paymentMethod, cardData, sellerId, platformRecipientId, sellerRecipientId, feePercentage }) {
         try {
@@ -51,7 +52,7 @@ class PagarmeService {
 
             const orderData = {
                 items: items.map(item => ({
-                    amount: Math.round(item.price * 100), // Pagarme uses cents
+                    amount: Math.round(item.price * 100), // Convert float to cents
                     description: item.name,
                     quantity: item.quantity,
                     code: item.id
@@ -127,6 +128,96 @@ class PagarmeService {
             return response.data;
         } catch (error) {
             console.error('Pagar.me createMultiItemOrder error:', error.response?.data || error.message);
+            throw error;
+        }
+    }
+
+    /**
+     * Create a single item order (Original Checkout)
+     * Expects product price in CENTS (integer) from DB
+     */
+    async createOrder({ product, buyer, paymentMethod, cardData, sellerId, platformRecipientId, sellerRecipientId, feePercentage }) {
+        try {
+            const sellerPercentage = 100 - feePercentage;
+
+            const orderData = {
+                items: [{
+                    amount: product.price, // Already in cents from DB
+                    description: product.name,
+                    quantity: 1,
+                    code: product.id
+                }],
+                customer: {
+                    name: buyer.name,
+                    email: buyer.email,
+                    document: buyer.cpf?.replace(/[^\d]/g, ''),
+                    type: 'individual',
+                    phones: {
+                        mobile_phone: {
+                            country_code: '55',
+                            area_code: buyer.phone?.substring(0, 2) || '11',
+                            number: buyer.phone?.substring(2) || '999999999'
+                        }
+                    }
+                },
+                payments: [],
+                split: [
+                    {
+                        amount: sellerPercentage,
+                        recipient_id: sellerRecipientId,
+                        type: 'percentage',
+                        options: {
+                            charge_processing_fee: true,
+                            liable: true
+                        }
+                    },
+                    {
+                        amount: feePercentage,
+                        recipient_id: platformRecipientId,
+                        type: 'percentage',
+                        options: {
+                            charge_processing_fee: false,
+                            liable: false
+                        }
+                    }
+                ]
+            };
+
+            // Add payment method
+            if (paymentMethod === 'pix') {
+                orderData.payments.push({
+                    payment_method: 'pix',
+                    pix: {
+                        expires_in: 3600 // 1 hour for direct link
+                    }
+                });
+            } else if (paymentMethod === 'credit_card') {
+                orderData.payments.push({
+                    payment_method: 'credit_card',
+                    credit_card: {
+                        installments: cardData.installments || 1,
+                        card: {
+                            number: cardData.number,
+                            holder_name: cardData.holder_name,
+                            exp_month: cardData.exp_month,
+                            exp_year: cardData.exp_year,
+                            cvv: cardData.cvv
+                        },
+                        billing_address: {
+                            line_1: buyer.address || 'Rua Teste, 123',
+                            zip_code: buyer.zipcode || '01001000',
+                            city: buyer.city || 'São Paulo',
+                            state: buyer.state || 'SP',
+                            country: 'BR'
+                        }
+                    }
+                });
+            }
+
+            const response = await pagarmeApi.post('/orders', orderData);
+            return response.data;
+        } catch (error) {
+            console.error('Pagar.me createOrder error:', error.response?.data || error.message);
             throw error;
         }
     }

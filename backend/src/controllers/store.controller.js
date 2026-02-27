@@ -51,6 +51,7 @@ class StoreController {
             // Format product prices
             const formattedProducts = products?.map(p => ({
                 ...p,
+                price: p.price / 100, // Important: Cart expects real value
                 price_display: (p.price / 100).toFixed(2)
             })) || [];
 
