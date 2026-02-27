@@ -69,7 +69,11 @@ export async function POST(req: Request) {
             } as any);
         } catch (pagarmeErr: any) {
             const errorBody = pagarmeErr.response?.data;
-            const errorMessage = errorBody?.message || pagarmeErr.message || 'Erro desconhecido';
+            const detailedErrors = errorBody?.errors
+                ? Object.entries(errorBody.errors).map(([field, msgs]: any) => `${field}: ${msgs.join(', ')}`).join('; ')
+                : null;
+
+            const errorMessage = detailedErrors || errorBody?.message || pagarmeErr.message || 'Erro desconhecido';
             console.error('Checkout Error (Final Sync):', JSON.stringify(errorBody || errorMessage, null, 2));
 
             return NextResponse.json({

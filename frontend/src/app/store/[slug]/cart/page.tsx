@@ -30,7 +30,10 @@ export default function CartPage() {
 
     const handleCheckout = async () => {
         if (items.length === 0) return toast.error("Carrinho vazio!");
-        if (!email || email !== confirmEmail) return toast.error("E-mails não coincidem ou estão vazios!");
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) return toast.error("Por favor, insira um e-mail válido!");
+        if (email !== confirmEmail) return toast.error("Os e-mails não coincidem!");
 
         try {
             setLoading(true);
@@ -310,8 +313,9 @@ export default function CartPage() {
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: '#64748b', fontWeight: 500 }}>
                                     <span>Método</span>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#00cec9', fontWeight: 700 }}>
-                                        <FiZap size={14} /> Pix
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: paymentMethod === 'pix' ? '#00cec9' : '#6c5ce7', fontWeight: 700 }}>
+                                        {paymentMethod === 'pix' ? <FiZap size={14} /> : <FiCreditCard size={14} />}
+                                        {paymentMethod === 'pix' ? 'Pix' : 'Cartão'}
                                     </div>
                                 </div>
                                 <div style={{ height: 1, background: 'rgba(255,255,255,0.05)', margin: '8px 0' }} />
