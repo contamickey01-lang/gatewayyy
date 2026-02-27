@@ -64,7 +64,12 @@ export async function POST(req: Request) {
         });
 
         const charge = pagarmeOrder.charges?.[0];
+        const lastTransaction = charge?.last_transaction;
         const totalAmountCents = pagarmeOrder.amount;
+
+        console.log('Pagar.me Order Created:', pagarmeOrder.id);
+        console.log('Charge Status:', charge?.status);
+        console.log('Transaction Type:', lastTransaction?.transaction_type);
 
         // 5. Save Order to Supabase
         const orderData: any = {
@@ -82,10 +87,18 @@ export async function POST(req: Request) {
             pagarme_charge_id: charge?.id
         };
 
-        if (method === 'pix' && charge?.last_transaction) {
-            orderData.pix_qr_code = charge.last_transaction.qr_code;
-            orderData.pix_qr_code_url = charge.last_transaction.qr_code_url;
-            orderData.pix_expires_at = charge.last_transaction.expires_at;
+        // Extract Pix details if present
+        if (method === 'pix') {
+            // Some versions return qr_code directly in last_transaction or within a pix object
+            const pixData = lastTransaction?.pix || lastTransaction;
+            orderData.pix_qr_code = pixData?.qr_code || lastTransaction?.qr_code;
+            orderData.pix_qr_code_url = pixData?.qr_code_url || lastTransaction?.qr_code_url;
+            orderData.pix_expires_at = pixData?.expires_at || lastTransaction?.expires_at;
+
+            console.log('Pix QR Code Found:', !!orderData.pix_qr_code);
+            if (!orderData.pix_qr_code) {
+                console.error('Full Transaction Data (Debug):', JSON.stringify(lastTransaction));
+            }
         }
 
         const { data: order, error: orderError } = await supabase
