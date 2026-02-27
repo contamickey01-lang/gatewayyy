@@ -264,16 +264,16 @@ class AuthController {
             if (error) throw error;
 
             // Fetch the updated user properly
-            const { data } = await supabase
+            const { data: updatedData, error: fetchError } = await supabase
                 .from('users')
                 .select('*')
-                .eq('id', req.user.id)
-                .single();
+                .eq('id', req.user.id);
 
-            if (error) throw error;
+            if (fetchError) throw fetchError;
 
-            delete data.password_hash;
-            res.json({ user: data, message: 'Perfil atualizado com sucesso!' });
+            const user = updatedData && updatedData.length > 0 ? updatedData[0] : {};
+            if (user.password_hash) delete user.password_hash;
+            res.json({ user, message: 'Perfil atualizado com sucesso!' });
         } catch (error) {
             next(error);
         }
