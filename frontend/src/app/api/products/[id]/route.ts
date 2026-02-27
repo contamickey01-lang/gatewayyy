@@ -13,7 +13,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const product = products?.[0];
 
     if (!product) return jsonError('Produto não encontrado', 404);
-    return jsonSuccess({ product });
+
+    return jsonSuccess({
+        product: {
+            ...product,
+            price: product.price / 100,
+            price_display: (product.price / 100).toFixed(2)
+        }
+    });
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

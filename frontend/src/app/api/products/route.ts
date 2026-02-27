@@ -15,7 +15,13 @@ export async function GET(req: NextRequest) {
         .eq('user_id', auth.user.id)
         .order('created_at', { ascending: false });
 
-    return jsonSuccess({ products: products || [] });
+    const formattedProducts = products?.map(p => ({
+        ...p,
+        price: p.price / 100,
+        price_display: (p.price / 100).toFixed(2)
+    })) || [];
+
+    return jsonSuccess({ products: formattedProducts });
 }
 
 export async function POST(req: NextRequest) {

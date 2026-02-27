@@ -60,6 +60,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
 
         if (prodError) throw prodError;
 
+        // Format products for store
+        const formattedProducts = products?.map(p => ({
+            ...p,
+            price: p.price / 100, // Important: Frontend expects real currency value
+            price_display: (p.price / 100).toFixed(2)
+        })) || [];
+
         return jsonSuccess({
             store: {
                 name: user.store_name,
@@ -68,7 +75,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
                 banner_url: user.store_banner_url
             },
             categories: categories || [],
-            products: products || []
+            products: formattedProducts
         });
     } catch (err) {
         console.error('Store loading error:', err);

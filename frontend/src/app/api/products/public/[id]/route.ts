@@ -22,6 +22,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         .single();
 
     return jsonSuccess({
-        product: { ...product, seller_name: seller?.name || 'Vendedor' }
+        product: {
+            ...product,
+            price: product.price / 100,
+            price_display: (product.price / 100).toFixed(2),
+            seller_name: seller?.name || 'Vendedor'
+        }
     });
 }
