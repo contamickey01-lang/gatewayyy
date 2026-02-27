@@ -67,9 +67,7 @@ export async function POST(req: Request) {
         const lastTransaction = charge?.last_transaction;
         const totalAmountCents = pagarmeOrder.amount;
 
-        console.log('Pagar.me Order Created:', pagarmeOrder.id);
-        console.log('Charge Status:', charge?.status);
-        console.log('Transaction Type:', lastTransaction?.transaction_type);
+        console.log('Pagar.me Order Created:', pagarmeOrder.id, 'Status:', pagarmeOrder.status);
 
         // 5. Save Order to Supabase
         const orderData: any = {
@@ -87,18 +85,25 @@ export async function POST(req: Request) {
             pagarme_charge_id: charge?.id
         };
 
-        // Extract Pix details if present
-        if (method === 'pix') {
-            // Some versions return qr_code directly in last_transaction or within a pix object
-            const pixData = lastTransaction?.pix || lastTransaction;
-            orderData.pix_qr_code = pixData?.qr_code || lastTransaction?.qr_code;
-            orderData.pix_qr_code_url = pixData?.qr_code_url || lastTransaction?.qr_code_url;
-            orderData.pix_expires_at = pixData?.expires_at || lastTransaction?.expires_at;
+        // Standardized Extraction (Exactly like working backend)
+        if (method === 'pix' && lastTransaction) {
+            orderData.pix_qr_code = lastTransaction.qr_code;
+            orderData.pix_qr_code_url = lastTransaction.qr_code_url;
+            orderData.pix_expires_at = lastTransaction.expires_at;
 
-            console.log('Pix QR Code Found:', !!orderData.pix_qr_code);
-            if (!orderData.pix_qr_code) {
-                console.error('Full Transaction Data (Debug):', JSON.stringify(lastTransaction));
+            // Fallback for different Pagar.me versions (Robustness)
+            if (!orderData.pix_qr_code && lastTransaction.pix) {
+                orderData.pix_qr_code = lastTransaction.pix.qr_code;
+                orderData.pix_qr_code_url = lastTransaction.pix.qr_code_url;
+                orderData.pix_expires_at = lastTransaction.pix.expires_at;
             }
+            console.log('Pix Data Found:', !!orderData.pix_qr_code);
+        }
+
+        if (method === 'credit_card' && lastTransaction) {
+            orderData.card_last_digits = lastTransaction.card?.last_four_digits;
+            orderData.card_brand = lastTransaction.card?.brand;
+            orderData.installments = body.card_data?.installments || 1;
         }
 
         const { data: order, error: orderError } = await supabase
@@ -112,7 +117,7 @@ export async function POST(req: Request) {
             throw orderError;
         }
 
-        // 6. Return response to frontend
+        // 6. Return response to frontend (Match backend response style)
         const response: any = {
             order: {
                 id: order.id,
@@ -127,6 +132,13 @@ export async function POST(req: Request) {
                 qr_code: order.pix_qr_code,
                 qr_code_url: order.pix_qr_code_url,
                 expires_at: order.pix_expires_at
+            };
+        }
+
+        if (method === 'credit_card') {
+            response.card = {
+                last_digits: order.card_last_digits,
+                brand: order.card_brand
             };
         }
 
