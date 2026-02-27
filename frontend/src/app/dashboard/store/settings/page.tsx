@@ -93,8 +93,47 @@ export default function StoreSettingsPage() {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24 }}>
                     <div>
-                        <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 6 }}>URL do Banner (Capa da Loja)</label>
-                        <input className="input-field" placeholder="https://imagem.com/banner.jpg" value={form.store_banner_url} onChange={e => update('store_banner_url', e.target.value)} />
+                        <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 6 }}>Capa da Loja (Banner)</label>
+                        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                            {form.store_banner_url && (
+                                <img src={form.store_banner_url} alt="Banner" style={{ width: 80, height: 40, objectFit: 'cover', borderRadius: 8 }} />
+                            )}
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={async (e) => {
+                                    const file = e.target.files?.[0];
+                                    if (!file) return;
+
+                                    const formData = new FormData();
+                                    formData.append('file', file);
+
+                                    const loadingToast = toast.loading('Enviando imagem...');
+                                    try {
+                                        const res = await fetch('/api/upload', {
+                                            method: 'POST',
+                                            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+                                            body: formData
+                                        });
+                                        const data = await res.json();
+                                        if (!res.ok) throw new Error(data.error || 'Erro no upload');
+
+                                        update('store_banner_url', data.url);
+                                        toast.success('Imagem enviada!', { id: loadingToast });
+                                    } catch (err: any) {
+                                        toast.error(err.message, { id: loadingToast });
+                                    }
+                                }}
+                                style={{
+                                    fontSize: 13,
+                                    padding: '6px',
+                                    border: '1px dashed var(--border-color)',
+                                    borderRadius: 8,
+                                    width: '100%',
+                                    cursor: 'pointer'
+                                }}
+                            />
+                        </div>
                     </div>
                     <div>
                         <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 6 }}>Tema da Loja</label>
