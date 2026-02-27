@@ -4,11 +4,11 @@ import { NextRequest } from 'next/server';
 import { supabase } from '@/lib/db';
 import { getAuthUser, jsonError, jsonSuccess } from '@/lib/auth';
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     const auth = await getAuthUser(req);
     if (!auth) return jsonError('Não autorizado', 401);
 
-    const { id } = params;
+    const { id } = await params;
 
     try {
         const { name, slug } = await req.json();
@@ -39,11 +39,11 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     const auth = await getAuthUser(req);
     if (!auth) return jsonError('Não autorizado', 401);
 
-    const { id } = params;
+    const { id } = await params;
 
     const { error } = await supabase
         .from('store_categories')

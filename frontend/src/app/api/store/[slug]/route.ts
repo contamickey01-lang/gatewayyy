@@ -4,8 +4,8 @@ import { NextRequest } from 'next/server';
 import { supabase } from '@/lib/db';
 import { jsonError, jsonSuccess } from '@/lib/auth';
 
-export async function GET(req: NextRequest, { params }: { params: { slug: string } }) {
-    const { slug } = params;
+export async function GET(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
+    const { slug } = await params;
     const categorySlug = req.nextUrl.searchParams.get('category');
 
     try {
