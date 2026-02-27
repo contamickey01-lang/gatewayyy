@@ -8,13 +8,23 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const { data: order } = await supabase
         .from('orders')
-        .select('id, status, amount_display, payment_method, created_at, buyer_email, buyer_name, product_id')
+        .select(`
+            id, status, amount, amount_display, payment_method, 
+            pix_qr_code, pix_qr_code_url, pix_expires_at, 
+            card_last_digits, card_brand, installments,
+            created_at, buyer_email, buyer_name, product_id
+        `)
         .eq('id', id)
         .single();
 
     if (!order) return jsonError('Pedido não encontrado', 404);
 
-    const response: any = { order: { id: order.id, status: order.status, amount_display: order.amount_display, payment_method: order.payment_method } };
+    const response: any = {
+        order: {
+            ...order,
+            amount_display: order.amount_display || (order.amount / 100).toFixed(2)
+        }
+    };
 
     // If payment just confirmed (PIX), handle auto-enrollment and return auth token
     if (order.status === 'paid' && order.buyer_email) {
