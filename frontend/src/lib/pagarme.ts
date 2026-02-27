@@ -37,7 +37,7 @@ export class PagarmeService {
         amount: number; payment_method: string; customer: any;
         card_data?: any; seller_recipient_id: string; platform_fee_percentage: number;
     }) {
-        const sellerPercentage = 100 - data.platform_fee_percentage;
+        const sellerPercentage = 100 - (data.platform_fee_percentage || 0);
         const platformRecipientId = process.env.PLATFORM_RECIPIENT_ID;
 
         const payment: any = { payment_method: data.payment_method };
@@ -56,51 +56,127 @@ export class PagarmeService {
                     exp_month: data.card_data.exp_month,
                     exp_year: data.card_data.exp_year,
                     cvv: data.card_data.cvv
+                },
+                billing_address: data.card_data.billing_address || {
+                    line_1: 'Rua Teste, 123',
+                    zip_code: '01001000',
+                    city: 'São Paulo',
+                    state: 'SP',
+                    country: 'BR'
                 }
             };
         }
 
-        // Only add split rules if the recipient IDs are real (not re_test_...)
-        if (data.seller_recipient_id && !data.seller_recipient_id.startsWith('re_test_') && platformRecipientId) {
+        // Only add split rules if IDs exist and fee > 0
+        if (data.seller_recipient_id && platformRecipientId && data.platform_fee_percentage > 0) {
             payment.split = [
                 {
                     amount: sellerPercentage,
                     recipient_id: data.seller_recipient_id,
                     type: 'percentage',
-                    options: {
-                        charge_processing_fee: true,
-                        charge_remainder_fee: true,
-                        liable: true
-                    }
+                    options: { charge_processing_fee: true, liable: true }
                 },
                 {
                     amount: data.platform_fee_percentage,
                     recipient_id: platformRecipientId,
                     type: 'percentage',
-                    options: {
-                        charge_processing_fee: false,
-                        charge_remainder_fee: false,
-                        liable: false
-                    }
+                    options: { charge_processing_fee: false, liable: false }
                 }
             ];
         }
 
         const response = await pagarmeApi.post('/orders', {
             customer: {
-                name: data.customer.name,
+                name: data.customer.name || 'Cliente',
                 email: data.customer.email,
-                document: data.customer.cpf.replace(/\D/g, ''),
+                document: data.customer.cpf?.replace(/\D/g, '') || '00000000000',
                 type: 'individual',
-                phones: data.customer.phone ? {
+                phones: {
                     mobile_phone: {
                         country_code: '55',
-                        area_code: data.customer.phone.replace(/\D/g, '').substring(0, 2),
-                        number: data.customer.phone.replace(/\D/g, '').substring(2)
+                        area_code: data.customer.phone?.replace(/\D/g, '').substring(0, 2) || '11',
+                        number: data.customer.phone?.replace(/\D/g, '').substring(2) || '999999999'
                     }
-                } : undefined
+                }
             },
             items: [{ amount: data.amount, description: 'Pagamento', quantity: 1, code: 'pay-001' }],
+            payments: [payment]
+        });
+        return response.data;
+    }
+
+    /**
+     * Create an order with multiple items (Cart)
+     */
+    static async createMultiItemOrder(data: {
+        items: any[]; payment_method: string; customer: any;
+        card_data?: any; seller_recipient_id: string; platform_fee_percentage: number;
+    }) {
+        const sellerPercentage = 100 - (data.platform_fee_percentage || 0);
+        const platformRecipientId = process.env.PLATFORM_RECIPIENT_ID;
+
+        const payment: any = { payment_method: data.payment_method };
+
+        if (data.payment_method === 'pix') {
+            payment.pix = { expires_in: 86400 };
+        } else if (data.payment_method === 'credit_card') {
+            payment.credit_card = {
+                installments: data.card_data?.installments || 1,
+                card: {
+                    number: data.card_data.number,
+                    holder_name: data.card_data.holder_name,
+                    exp_month: data.card_data.exp_month,
+                    exp_year: data.card_data.exp_year,
+                    cvv: data.card_data.cvv
+                },
+                billing_address: data.card_data.billing_address || {
+                    line_1: 'Rua Teste, 123',
+                    zip_code: '01001000',
+                    city: 'São Paulo',
+                    state: 'SP',
+                    country: 'BR'
+                }
+            };
+        }
+
+        // Add split rules if IDs exist
+        if (data.seller_recipient_id && platformRecipientId && data.platform_fee_percentage > 0) {
+            payment.split = [
+                {
+                    amount: sellerPercentage,
+                    recipient_id: data.seller_recipient_id,
+                    type: 'percentage',
+                    options: { charge_processing_fee: true, liable: true }
+                },
+                {
+                    amount: data.platform_fee_percentage,
+                    recipient_id: platformRecipientId,
+                    type: 'percentage',
+                    options: { charge_processing_fee: false, liable: false }
+                }
+            ];
+        }
+
+        const response = await pagarmeApi.post('/orders', {
+            customer: {
+                name: data.customer.name || 'Cliente',
+                email: data.customer.email,
+                document: data.customer.cpf?.replace(/\D/g, '') || '00000000000',
+                type: 'individual',
+                phones: {
+                    mobile_phone: {
+                        country_code: '55',
+                        area_code: data.customer.phone?.replace(/\D/g, '').substring(0, 2) || '11',
+                        number: data.customer.phone?.replace(/\D/g, '').substring(2) || '999999999'
+                    }
+                }
+            },
+            items: data.items.map(item => ({
+                amount: Math.round(item.price * 100),
+                description: item.name,
+                quantity: item.quantity,
+                code: item.id
+            })),
             payments: [payment]
         });
         return response.data;
