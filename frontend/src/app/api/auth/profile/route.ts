@@ -11,13 +11,12 @@ export async function GET(req: NextRequest) {
     const auth = await getAuthUser(req);
     if (!auth) return jsonError('Não autorizado', 401);
 
-    const { data: user } = await supabase
+    const { data: users } = await supabase
         .from('users')
         .select('*') // Fetch all fields including bank and address info
-        .eq('id', auth.user.id)
-        .single();
+        .eq('id', auth.user.id);
 
-    return jsonSuccess({ user });
+    return jsonSuccess({ user: users?.[0] });
 }
 
 const BANK_CODES: Record<string, string> = {
@@ -31,12 +30,13 @@ export async function PUT(req: NextRequest) {
     if (!auth) return jsonError('Não autorizado', 401);
 
     try {
-        // Fetch old user to detect changes in critical fields (like document)
-        const { data: oldUser } = await supabase
+        // Fetch old user to detect changes in critical fields (like document) without .single()
+        const { data: usersOld } = await supabase
             .from('users')
             .select('cpf_cnpj')
-            .eq('id', auth.user.id)
-            .single();
+            .eq('id', auth.user.id);
+
+        const oldUser = usersOld?.[0];
 
         const body = await req.json();
         const allowedFields = [
@@ -44,7 +44,9 @@ export async function PUT(req: NextRequest) {
             'address_street', 'address_number', 'address_complement',
             'address_neighborhood', 'address_city', 'address_state', 'address_zipcode',
             'pix_key', 'pix_key_type',
-            'bank_name', 'bank_agency', 'bank_account', 'bank_account_digit', 'bank_account_type'
+            'bank_name', 'bank_agency', 'bank_account', 'bank_account_digit', 'bank_account_type',
+            'store_name', 'store_slug', 'store_description', 'store_active',
+            'store_theme', 'store_banner_url'
         ];
 
         const updateData: any = {};
@@ -60,29 +62,37 @@ export async function PUT(req: NextRequest) {
             }
         }
 
-
-
-        const { data: user, error } = await supabase
+        const { error } = await supabase
             .from('users')
             .update(updateData)
-            .eq('id', auth.user.id)
-            .select('*') // Fetch all fields after update
-            .single();
+            .eq('id', auth.user.id);
 
         if (error) {
             console.error('Supabase profile update error:', error);
             return jsonError(`Erro ao atualizar perfil: ${error.message}`);
         }
 
+        // Fetch user after update without .single()
+        const { data: users } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', auth.user.id);
+
+        const user = users?.[0];
+
+        if (!user) {
+            return jsonError('Erro ao recuperar perfil atualizado');
+        }
 
         // Sync with Pagar.me if bank details are provided
         if (body.bank_name && body.bank_agency && body.bank_account) {
             try {
-                const { data: existingRecipient } = await supabase
+                const { data: recipients } = await supabase
                     .from('recipients')
                     .select('pagarme_recipient_id')
-                    .eq('user_id', auth.user.id)
-                    .single();
+                    .eq('user_id', auth.user.id);
+
+                const existingRecipient = recipients?.[0];
 
                 // Detect if the document (CPF/CNPJ) changed
                 const oldDoc = oldUser?.cpf_cnpj?.replace(/\D/g, '');
