@@ -113,7 +113,7 @@ export class PagarmeService {
             const cleanNumber = String(card.number || '').replace(/\D/g, '');
             const expMonth = parseInt(String(card.exp_month || '0')) || 1;
             const rawYear = String(card.exp_year || '0');
-            const expYear = parseInt(rawYear.length === 2 ? `20${rawYear}` : rawYear) || 2026;
+            const expYear = parseInt(rawYear.length === 2 ? `20${rawYear}` : rawYear) || 2030;
             const installments = parseInt(String(card.installments || '1')) || 1;
 
             orderData.payments.push({
@@ -219,7 +219,7 @@ export class PagarmeService {
             const cleanNumber = String(card.number || '').replace(/\D/g, '');
             const expMonth = parseInt(String(card.exp_month || '0')) || 1;
             const rawYear = String(card.exp_year || '0');
-            const expYear = parseInt(rawYear.length === 2 ? `20${rawYear}` : rawYear) || 2026;
+            const expYear = parseInt(rawYear.length === 2 ? `20${rawYear}` : rawYear) || 2030;
             const installments = parseInt(String(card.installments || '1')) || 1;
 
             orderData.payments.push({
