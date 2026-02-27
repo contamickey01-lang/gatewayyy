@@ -1,0 +1,114 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { authAPI } from '@/lib/api';
+import toast from 'react-hot-toast';
+
+export default function StoreSettingsPage() {
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [form, setForm] = useState({
+        store_active: false,
+        store_name: '',
+        store_slug: '',
+        store_description: '',
+        store_theme: 'light',
+        store_banner_url: ''
+    });
+
+    useEffect(() => {
+        loadProfile();
+    }, []);
+
+    const loadProfile = async () => {
+        try {
+            const { data } = await authAPI.getProfile();
+            setForm({
+                store_active: data.store_active || false,
+                store_name: data.store_name || '',
+                store_slug: data.store_slug || '',
+                store_description: data.store_description || '',
+                store_theme: data.store_theme || 'light',
+                store_banner_url: data.store_banner_url || ''
+            });
+        } catch (error) {
+            toast.error('Erro ao carregar configurações da loja');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const update = (field: string, value: any) => setForm({ ...form, [field]: value });
+
+    const handleSave = async () => {
+        setSaving(true);
+        try {
+            await authAPI.updateProfile(form);
+            toast.success('Configurações da loja salvas com sucesso!');
+        } catch (error: any) {
+            toast.error(error.response?.data?.error || 'Erro ao salvar loja');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    if (loading) return <div style={{ textAlign: 'center', padding: 40 }}>Carregando...</div>;
+
+    return (
+        <div style={{ maxWidth: 800 }}>
+            <div className="glass-card" style={{ padding: 24 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, paddingBottom: 16, borderBottom: '1px solid var(--border-color)' }}>
+                    <div>
+                        <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 4 }}>Ativação da Loja</h3>
+                        <p style={{ fontSize: 14, color: 'var(--text-secondary)' }}>Defina se sua vitrine pública está visível para clientes.</p>
+                    </div>
+                    <label style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={form.store_active} onChange={e => update('store_active', e.target.checked)} style={{ width: 44, height: 24, appearance: 'none', background: form.store_active ? 'var(--success)' : 'var(--bg-secondary)', borderRadius: 12, position: 'relative', outline: 'none', transition: 'all 0.3s' }} />
+                        <span style={{ position: 'absolute', width: 20, height: 20, background: 'white', borderRadius: '50%', transition: 'all 0.3s', transform: `translateX(${form.store_active ? '22px' : '2px'})`, pointerEvents: 'none' }} />
+                    </label>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
+                    <div>
+                        <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 6 }}>Nome da Loja</label>
+                        <input className="input-field" placeholder="Ex: Cursos do João" value={form.store_name} onChange={e => update('store_name', e.target.value)} />
+                    </div>
+                    <div>
+                        <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 6 }}>Link / Slug da Loja</label>
+                        <input className="input-field" placeholder="Ex: minhaloja" value={form.store_slug} onChange={e => update('store_slug', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))} />
+                        {form.store_slug && (
+                            <div style={{ marginTop: 8 }}>
+                                <a href={`/store/${form.store_slug}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: 'var(--accent-primary)', textDecoration: 'none', fontWeight: 600 }}>
+                                    Abrir minha loja ↗
+                                </a>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div style={{ marginBottom: 20 }}>
+                    <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 6 }}>Pequena Descrição da Loja</label>
+                    <textarea className="input-field" rows={3} placeholder="Escreva um recado de boas vindas para quem acessar sua loja..." value={form.store_description} onChange={e => update('store_description', e.target.value)} />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24 }}>
+                    <div>
+                        <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 6 }}>URL do Banner (Capa da Loja)</label>
+                        <input className="input-field" placeholder="https://imagem.com/banner.jpg" value={form.store_banner_url} onChange={e => update('store_banner_url', e.target.value)} />
+                    </div>
+                    <div>
+                        <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 6 }}>Tema da Loja</label>
+                        <select className="input-field" value={form.store_theme} onChange={e => update('store_theme', e.target.value)} style={{ paddingRight: 32 }}>
+                            <option value="light">Claro (Light Mode)</option>
+                            <option value="dark">Escuro (Dark Mode)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button onClick={handleSave} disabled={saving} className="btn-primary" style={{ width: '100%' }}>
+                    {saving ? 'Salvando...' : 'Salvar Configurações da Loja'}
+                </button>
+            </div>
+        </div>
+    );
+}

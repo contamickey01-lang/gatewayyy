@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { FiHome, FiPackage, FiDollarSign, FiSettings, FiLogOut, FiMenu, FiX, FiPercent, FiBookOpen, FiUser, FiMessageCircle } from 'react-icons/fi';
+import { FiHome, FiPackage, FiDollarSign, FiSettings, FiLogOut, FiMenu, FiX, FiPercent, FiBookOpen, FiUser, FiMessageCircle, FiShoppingBag } from 'react-icons/fi';
 import { ThemeToggle } from '@/components/theme-toggle';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -52,6 +52,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         { href: '/dashboard/withdrawals', icon: <FiDollarSign size={18} />, label: 'Saques' },
         { href: '/dashboard/fees', icon: <FiPercent size={18} />, label: 'Taxas' },
         { href: '/dashboard/settings', icon: <FiSettings size={18} />, label: 'Configurações' },
+        { href: '/dashboard/store/settings', icon: <FiShoppingBag size={18} />, label: 'Minha Loja' },
         { href: '/dashboard/contact', icon: <FiMessageCircle size={18} />, label: 'Falar com a gente' },
     ];
 

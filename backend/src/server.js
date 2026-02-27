@@ -17,6 +17,7 @@ const adminRoutes = require('./routes/admin.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
 const contentRoutes = require('./routes/content.routes');
 const memberRoutes = require('./routes/member.routes');
+const storeCategoriesRoutes = require('./routes/store_categories.routes');
 const storeRoutes = require('./routes/store.routes');
 
 const app = express();
@@ -73,6 +74,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/content', contentRoutes);
 app.use('/api/member', memberRoutes);
+app.use('/api/store-categories', storeCategoriesRoutes);
 app.use('/api/store', storeRoutes);
 
 // 404 handler

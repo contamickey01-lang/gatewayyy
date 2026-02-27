@@ -101,9 +101,17 @@ export const memberAPI = {
     getLesson: (lessonId: string) => api.get(`/member/lesson/${lessonId}`),
 };
 
+// Store Categories
+export const storeCategoriesAPI = {
+    list: () => api.get('/store-categories'),
+    create: (data: any) => api.post('/store-categories', data),
+    update: (id: string, data: any) => api.put(`/store-categories/${id}`, data),
+    delete: (id: string) => api.delete(`/store-categories/${id}`),
+};
+
 // Store
 export const storeAPI = {
-    getStoreBySlug: (slug: string) => api.get(`/store/${slug}`),
+    getStoreBySlug: (slug: string, category?: string) => api.get(`/store/${slug}`, { params: { category } }),
 };
 
 export default api;
