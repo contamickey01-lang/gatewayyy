@@ -5,15 +5,17 @@ class StoreCategoryController {
         try {
             const { name, slug } = req.body;
 
-            const { data, error } = await supabase
+            const { data: categories, error } = await supabase
                 .from('store_categories')
                 .insert({
                     user_id: req.user.id,
                     name,
                     slug: slug.toLowerCase().replace(/[^a-z0-9-]/g, '')
                 })
-                .select()
-                .single();
+                .select();
+
+            if (error) throw error;
+            const data = categories && categories.length > 0 ? categories[0] : null;
 
             if (error) throw error;
             res.status(201).json({ category: data, message: 'Categoria criada com sucesso!' });
@@ -44,13 +46,15 @@ class StoreCategoryController {
             if (name !== undefined) updates.name = name;
             if (slug !== undefined) updates.slug = slug.toLowerCase().replace(/[^a-z0-9-]/g, '');
 
-            const { data, error } = await supabase
+            const { data: categories, error } = await supabase
                 .from('store_categories')
                 .update(updates)
                 .eq('id', req.params.id)
                 .eq('user_id', req.user.id)
-                .select()
-                .single();
+                .select();
+
+            if (error) throw error;
+            const data = categories && categories.length > 0 ? categories[0] : null;
 
             if (error) throw error;
             if (!data) return res.status(404).json({ error: 'Categoria não encontrada.' });
