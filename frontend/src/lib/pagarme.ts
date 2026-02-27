@@ -40,6 +40,18 @@ export class PagarmeService {
         const sellerPercentage = 100 - (data.platform_fee_percentage || 0);
         const platformRecipientId = process.env.PLATFORM_RECIPIENT_ID;
 
+        // Robust Address Object
+        const address = {
+            line_1: 'Rua Teste, 123, Bairro Teste',
+            zip_code: '01001000',
+            city: 'São Paulo',
+            state: 'SP',
+            country: 'BR',
+            street: 'Rua Teste',
+            number: '123',
+            neighborhood: 'Bairro Teste'
+        };
+
         const orderData: any = {
             customer: {
                 name: data.customer.name || 'Cliente',
@@ -52,7 +64,8 @@ export class PagarmeService {
                         area_code: data.customer.phone?.replace(/\D/g, '').substring(0, 2) || '11',
                         number: data.customer.phone?.replace(/\D/g, '').substring(2) || '999999999'
                     }
-                }
+                },
+                address // Adding address to customer too (often required for antifraud)
             },
             items: [{
                 amount: data.amount,
@@ -68,7 +81,6 @@ export class PagarmeService {
         const sellId = (data.seller_recipient_id || '').trim();
         const fee = data.platform_fee_percentage || 0;
 
-        // CRITICAL: Only split if we have 2 distinct recipients and a non-zero fee
         const shouldSplit = platId && sellId && fee > 0 && platId.toLowerCase() !== sellId.toLowerCase();
 
         if (shouldSplit) {
@@ -108,19 +120,18 @@ export class PagarmeService {
                 payment_method: 'credit_card',
                 credit_card: {
                     installments: installments,
+                    statement_descriptor: 'PEDIDO',
                     card: {
                         number: cleanNumber,
-                        holder_name: card.holder_name,
+                        holder_name: card.holder_name || data.customer.name,
                         exp_month: expMonth,
                         exp_year: expYear,
                         cvv: card.cvv
                     },
-                    billing_address: card.billing_address || {
-                        line_1: 'Rua Teste, 123',
-                        zip_code: '01001000',
-                        city: 'São Paulo',
-                        state: 'SP',
-                        country: 'BR'
+                    // Providing BOTH billing_address and billing objects for maximum compatibility
+                    billing_address: address,
+                    billing: {
+                        address: address
                     }
                 }
             });
@@ -138,7 +149,18 @@ export class PagarmeService {
         card_data?: any; seller_recipient_id: string; platform_fee_percentage: number;
     }) {
         const sellerPercentage = 100 - (data.platform_fee_percentage || 0);
-        const platformRecipientId = process.env.PLATFORM_RECIPIENT_ID;
+
+        // Robust Address Object
+        const address = {
+            line_1: 'Rua Teste, 123, Bairro Teste',
+            zip_code: '01001000',
+            city: 'São Paulo',
+            state: 'SP',
+            country: 'BR',
+            street: 'Rua Teste',
+            number: '123',
+            neighborhood: 'Bairro Teste'
+        };
 
         const orderData: any = {
             customer: {
@@ -152,7 +174,8 @@ export class PagarmeService {
                         area_code: data.customer.phone?.replace(/\D/g, '').substring(0, 2) || '11',
                         number: data.customer.phone?.replace(/\D/g, '').substring(2) || '999999999'
                     }
-                }
+                },
+                address
             },
             items: data.items.map(item => ({
                 amount: Math.round(item.price * 100),
@@ -163,18 +186,10 @@ export class PagarmeService {
             payments: []
         };
 
-        // Add split rules at root level (matched to backend)
         const platId = (process.env.PLATFORM_RECIPIENT_ID || '').trim();
         const sellId = (data.seller_recipient_id || '').trim();
         const fee = data.platform_fee_percentage || 0;
 
-        console.log('PagarmeService: Debugging Split Logic');
-        console.log(`PagarmeService: PLATFORM_RECIPIENT_ID (platId): "${platId}"`);
-        console.log(`PagarmeService: SELLER_RECIPIENT_ID (sellId): "${sellId}"`);
-        console.log(`PagarmeService: Platform Fee Percentage (fee): ${fee}`);
-        console.log(`PagarmeService: platId.toLowerCase() !== sellId.toLowerCase(): ${platId.toLowerCase() !== sellId.toLowerCase()}`);
-
-        // CRITICAL: Skip split if any ID is missing, if they are the same, or if fee is 0
         const shouldSplit = platId && sellId && fee > 0 && platId.toLowerCase() !== sellId.toLowerCase();
 
         if (shouldSplit) {
@@ -192,9 +207,6 @@ export class PagarmeService {
                     options: { charge_processing_fee: false, liable: false }
                 }
             ];
-        } else {
-            console.log('--- SKIPPING SPLIT ---');
-            console.log('Reason: ', !platId ? 'Missing Platform ID' : !sellId ? 'Missing Seller ID' : fee <= 0 ? 'Fee is 0' : 'Identical Recipients');
         }
 
         if (data.payment_method === 'pix') {
@@ -214,19 +226,17 @@ export class PagarmeService {
                 payment_method: 'credit_card',
                 credit_card: {
                     installments: installments,
+                    statement_descriptor: 'LOJA',
                     card: {
                         number: cleanNumber,
-                        holder_name: card.holder_name,
+                        holder_name: card.holder_name || data.customer.name,
                         exp_month: expMonth,
                         exp_year: expYear,
                         cvv: card.cvv
                     },
-                    billing_address: card.billing_address || {
-                        line_1: 'Rua Teste, 123',
-                        zip_code: '01001000',
-                        city: 'São Paulo',
-                        state: 'SP',
-                        country: 'BR'
+                    billing_address: address,
+                    billing: {
+                        address: address
                     }
                 }
             });
