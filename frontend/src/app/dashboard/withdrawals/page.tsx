@@ -110,8 +110,8 @@ export default function WithdrawalsPage() {
                             <FiLock size={24} />
                         </div>
                         <div>
-                            <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4, color: '#fff' }}>Ative a movimentação do seu saldo</h3>
-                            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: 1.5, maxWidth: 500 }}>
+                            <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4, color: '#000' }}>Ative a movimentação do seu saldo</h3>
+                            <p style={{ fontSize: 13, color: 'rgba(0,0,0,0.8)', lineHeight: 1.5, maxWidth: 500, fontWeight: 500 }}>
                                 Para liberar saques e movimentar seu saldo, o Pagar.me exige a verificação de identidade (foto do documento e rosto). Seus dados são processados com total segurança pelo Pagar.me, uma instituição de pagamentos regulamentada pelo Banco Central do Brasil.
                             </p>
                         </div>
