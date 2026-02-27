@@ -49,34 +49,35 @@ export async function POST(req: Request) {
             fee_percentage: feePercentage
         });
 
-        // 4. Create Pagar.me Order (Integrated Logic)
+        // 4. Create Pagar.me Order (Mirroring STANDALONE System)
+        const totalAmountCents = items_cart.reduce((sum: number, item: any) => sum + Math.round(item.price * 100 * item.quantity), 0);
         const method = payment_method === 'card' ? 'credit_card' : payment_method;
 
         let pagarmeOrder;
         try {
-            pagarmeOrder = await PagarmeService.createMultiItemOrder({
-                items: items_cart,
+            // we use the same "createOrder" used by the standalone system that works
+            pagarmeOrder = await PagarmeService.createOrder({
+                amount: totalAmountCents,
+                payment_method: method,
                 customer: {
                     name: name || 'Cliente Loja',
                     email: email,
                     cpf: cpf || '00000000000',
                     phone: phone || '11999999999'
                 },
-                payment_method: method,
                 seller_recipient_id: recipient.pagarme_recipient_id,
                 platform_fee_percentage: feePercentage,
                 card_data: body.card_data
-            });
+            } as any);
         } catch (pagarmeErr: any) {
             const errorBody = pagarmeErr.response?.data || pagarmeErr.message;
-            console.error('Pagar.me API Error:', JSON.stringify(errorBody, null, 2));
+            console.error('Pagar.me API Error (Standalone Mirror):', JSON.stringify(errorBody, null, 2));
 
             return NextResponse.json({
                 error: `Erro no Pagar.me: ${errorBody.message || 'action_forbidden'}`,
                 diagnostic: {
                     seller_recipient: recipient.pagarme_recipient_id,
                     platform_recipient: process.env.PLATFORM_RECIPIENT_ID || 'MISSING_ENV',
-                    fee_percentage: feePercentage,
                     raw_error: errorBody
                 }
             }, { status: 400 });
@@ -84,28 +85,20 @@ export async function POST(req: Request) {
 
         const charge = pagarmeOrder.charges?.[0];
         const lastTransaction = charge?.last_transaction;
-        const totalAmountCents = pagarmeOrder.amount;
 
-        console.log('--- PAGARME DIAGNOSTIC ---');
+        console.log('--- PAGARME STANDALONE MIRROR SUCCESS ---');
         console.log('Order ID:', pagarmeOrder.id, '| Status:', pagarmeOrder.status);
         console.log('Charge ID:', charge?.id, '| Status:', charge?.status);
-        console.log('Transaction Type:', lastTransaction?.transaction_type);
 
-        // --- ERROR DETECTION AND DIAGNOSTIC INFO ---
-        let pagarmeErrorMessage = null;
+        // --- ERROR DETECTION ---
         if (charge?.status === 'failed' || pagarmeOrder.status === 'failed') {
             const gatewayErrors = lastTransaction?.gateway_response?.errors;
-            pagarmeErrorMessage = gatewayErrors?.map((e: any) => e.message).join('; ') || lastTransaction?.acquirer_message || 'Transação recusada pelo gateway.';
-            console.error('DIAGNOSTIC: Payment failed at Pagar.me:', pagarmeErrorMessage);
+            const msg = gatewayErrors?.map((e: any) => e.message).join('; ') || lastTransaction?.acquirer_message || 'Transação recusada.';
 
             return NextResponse.json({
-                error: `Pagamento Recusado: ${pagarmeErrorMessage}`,
+                error: `Pagamento Recusado: ${msg}`,
                 status: charge?.status || pagarmeOrder.status,
-                pagarme_id: pagarmeOrder.id,
-                diagnostic: {
-                    seller: recipient.pagarme_recipient_id,
-                    platform: process.env.PLATFORM_RECIPIENT_ID
-                }
+                pagarme_id: pagarmeOrder.id
             }, { status: 400 });
         }
 

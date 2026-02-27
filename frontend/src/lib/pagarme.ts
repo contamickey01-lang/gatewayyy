@@ -161,6 +161,12 @@ export class PagarmeService {
         const sellId = (data.seller_recipient_id || '').trim();
         const fee = data.platform_fee_percentage || 0;
 
+        console.log('PagarmeService: Debugging Split Logic');
+        console.log(`PagarmeService: PLATFORM_RECIPIENT_ID (platId): "${platId}"`);
+        console.log(`PagarmeService: SELLER_RECIPIENT_ID (sellId): "${sellId}"`);
+        console.log(`PagarmeService: Platform Fee Percentage (fee): ${fee}`);
+        console.log(`PagarmeService: platId.toLowerCase() !== sellId.toLowerCase(): ${platId.toLowerCase() !== sellId.toLowerCase()}`);
+
         // CRITICAL: Skip split if any ID is missing, if they are the same, or if fee is 0
         const shouldSplit = platId && sellId && fee > 0 && platId.toLowerCase() !== sellId.toLowerCase();
 
