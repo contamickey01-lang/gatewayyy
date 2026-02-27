@@ -38,10 +38,9 @@ export class PagarmeService {
         card_data?: any; seller_recipient_id: string; platform_fee_percentage: number;
     }) {
         const sellerPercentage = 100 - (data.platform_fee_percentage || 0);
-        const platformRecipientId = process.env.PLATFORM_RECIPIENT_ID;
 
-        // Robust Address Object
-        const address = {
+        // Robust Address Object with fallback to dummy only if absolutely missing
+        const address = data.customer.address || {
             line_1: 'Rua Teste, 123, Centro',
             zip_code: '01001000',
             city: 'São Paulo',
@@ -76,6 +75,7 @@ export class PagarmeService {
             payments: []
         };
 
+        // Add split rules at root level
         const platId = (process.env.PLATFORM_RECIPIENT_ID || '').trim();
         const sellId = (data.seller_recipient_id || '').trim();
         const fee = data.platform_fee_percentage || 0;
@@ -128,7 +128,6 @@ export class PagarmeService {
                         cvv: card.cvv,
                         billing_address: address
                     },
-                    // Mandatory billing object for most anti-fraud configs
                     billing: {
                         name: data.customer.name || 'Cliente',
                         address: address
@@ -141,13 +140,16 @@ export class PagarmeService {
         return response.data;
     }
 
+    /**
+     * Create an order with multiple items (Cart)
+     */
     static async createMultiItemOrder(data: {
         items: any[]; payment_method: string; customer: any;
         card_data?: any; seller_recipient_id: string; platform_fee_percentage: number;
     }) {
         const sellerPercentage = 100 - (data.platform_fee_percentage || 0);
 
-        const address = {
+        const address = data.customer.address || {
             line_1: 'Rua Teste, 123, Centro',
             zip_code: '01001000',
             city: 'São Paulo',
@@ -231,7 +233,6 @@ export class PagarmeService {
                         cvv: card.cvv,
                         billing_address: address
                     },
-                    // Mandatory billing object for most anti-fraud configs
                     billing: {
                         name: data.customer.name || 'Cliente',
                         address: address
