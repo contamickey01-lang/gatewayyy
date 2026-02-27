@@ -64,18 +64,24 @@ export class PagarmeService {
         };
 
         // Add split rules at root level (matched to backend)
-        // CRITICAL FIX: Skip split if seller is the platform (Pagar.me forbids split to same recipient)
-        if (data.seller_recipient_id && platformRecipientId && data.platform_fee_percentage > 0 && data.seller_recipient_id !== platformRecipientId) {
+        const platId = (process.env.PLATFORM_RECIPIENT_ID || '').trim();
+        const sellId = (data.seller_recipient_id || '').trim();
+        const fee = data.platform_fee_percentage || 0;
+
+        // CRITICAL: Only split if we have 2 distinct recipients and a non-zero fee
+        const shouldSplit = platId && sellId && fee > 0 && platId.toLowerCase() !== sellId.toLowerCase();
+
+        if (shouldSplit) {
             orderData.split = [
                 {
                     amount: sellerPercentage,
-                    recipient_id: data.seller_recipient_id,
+                    recipient_id: sellId,
                     type: 'percentage',
                     options: { charge_processing_fee: true, liable: true }
                 },
                 {
-                    amount: data.platform_fee_percentage,
-                    recipient_id: platformRecipientId,
+                    amount: fee,
+                    recipient_id: platId,
                     type: 'percentage',
                     options: { charge_processing_fee: false, liable: false }
                 }
@@ -151,29 +157,31 @@ export class PagarmeService {
         };
 
         // Add split rules at root level (matched to backend)
-        // CRITICAL FIX: Skip split if seller is the platform (Pagar.me forbids split to same recipient)
-        console.log('--- SPLIT DIAGNOSTIC ---');
-        console.log('Seller Recipient:', data.seller_recipient_id);
-        console.log('Platform Recipient:', platformRecipientId);
+        const platId = (process.env.PLATFORM_RECIPIENT_ID || '').trim();
+        const sellId = (data.seller_recipient_id || '').trim();
+        const fee = data.platform_fee_percentage || 0;
 
-        if (data.seller_recipient_id && platformRecipientId && data.platform_fee_percentage > 0 && data.seller_recipient_id !== platformRecipientId) {
-            console.log('Action: Applying Split Rules');
+        // CRITICAL: Skip split if any ID is missing, if they are the same, or if fee is 0
+        const shouldSplit = platId && sellId && fee > 0 && platId.toLowerCase() !== sellId.toLowerCase();
+
+        if (shouldSplit) {
             orderData.split = [
                 {
                     amount: sellerPercentage,
-                    recipient_id: data.seller_recipient_id,
+                    recipient_id: sellId,
                     type: 'percentage',
                     options: { charge_processing_fee: true, liable: true }
                 },
                 {
-                    amount: data.platform_fee_percentage,
-                    recipient_id: platformRecipientId,
+                    amount: fee,
+                    recipient_id: platId,
                     type: 'percentage',
                     options: { charge_processing_fee: false, liable: false }
                 }
             ];
         } else {
-            console.log('Action: Skipping Split Rules (Seller is Platform or No Fee)');
+            console.log('--- SKIPPING SPLIT ---');
+            console.log('Reason: ', !platId ? 'Missing Platform ID' : !sellId ? 'Missing Seller ID' : fee <= 0 ? 'Fee is 0' : 'Identical Recipients');
         }
 
         if (data.payment_method === 'pix') {

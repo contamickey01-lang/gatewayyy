@@ -38,30 +38,49 @@ export async function POST(req: Request) {
         }
 
         // 3. Get platform settings (fees & platform recipient)
-        const { data: settings } = await supabase
-            .from('platform_settings')
-            .select('*')
-            .single();
+        const feePercentage = parseFloat(process.env.PLATFORM_FEE_PERCENTAGE || '3');
+        const platformRecipientId = process.env.PLATFORM_RECIPIENT_ID;
 
-        const feePercentage = settings?.fee_percentage || 15;
-        const platformRecipientId = settings?.platform_recipient_id || process.env.PLATFORM_RECIPIENT_ID;
+        // Diagnostic log for server-side troubleshooting
+        console.log('DIAGNOSTIC - Checkout Config:', {
+            seller_id: sellerId,
+            seller_recipient: recipient.pagarme_recipient_id,
+            platform_recipient: platformRecipientId,
+            fee_percentage: feePercentage
+        });
 
         // 4. Create Pagar.me Order (Integrated Logic)
         const method = payment_method === 'card' ? 'credit_card' : payment_method;
 
-        const pagarmeOrder = await PagarmeService.createMultiItemOrder({
-            items: items_cart,
-            customer: {
-                name: name || 'Cliente Loja',
-                email: email,
-                cpf: cpf || '00000000000',
-                phone: phone || '11999999999'
-            },
-            payment_method: method,
-            seller_recipient_id: recipient.pagarme_recipient_id,
-            platform_fee_percentage: feePercentage,
-            card_data: body.card_data
-        });
+        let pagarmeOrder;
+        try {
+            pagarmeOrder = await PagarmeService.createMultiItemOrder({
+                items: items_cart,
+                customer: {
+                    name: name || 'Cliente Loja',
+                    email: email,
+                    cpf: cpf || '00000000000',
+                    phone: phone || '11999999999'
+                },
+                payment_method: method,
+                seller_recipient_id: recipient.pagarme_recipient_id,
+                platform_fee_percentage: feePercentage,
+                card_data: body.card_data
+            });
+        } catch (pagarmeErr: any) {
+            const errorBody = pagarmeErr.response?.data || pagarmeErr.message;
+            console.error('Pagar.me API Error:', JSON.stringify(errorBody, null, 2));
+
+            return NextResponse.json({
+                error: `Erro no Pagar.me: ${errorBody.message || 'action_forbidden'}`,
+                diagnostic: {
+                    seller_recipient: recipient.pagarme_recipient_id,
+                    platform_recipient: process.env.PLATFORM_RECIPIENT_ID || 'MISSING_ENV',
+                    fee_percentage: feePercentage,
+                    raw_error: errorBody
+                }
+            }, { status: 400 });
+        }
 
         const charge = pagarmeOrder.charges?.[0];
         const lastTransaction = charge?.last_transaction;
@@ -82,7 +101,11 @@ export async function POST(req: Request) {
             return NextResponse.json({
                 error: `Pagamento Recusado: ${pagarmeErrorMessage}`,
                 status: charge?.status || pagarmeOrder.status,
-                pagarme_id: pagarmeOrder.id
+                pagarme_id: pagarmeOrder.id,
+                diagnostic: {
+                    seller: recipient.pagarme_recipient_id,
+                    platform: process.env.PLATFORM_RECIPIENT_ID
+                }
             }, { status: 400 });
         }
 
