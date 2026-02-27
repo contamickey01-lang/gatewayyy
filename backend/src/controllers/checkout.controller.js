@@ -231,16 +231,16 @@ class CheckoutController {
             const orderData = {
                 product_id: items_cart[0].id,
                 seller_id: sellerId,
-                buyer_name: buyer.name,
+                buyer_name: buyer.name || 'Cliente',
                 buyer_email: buyer.email,
-                buyer_cpf: buyer.cpf,
-                buyer_phone: buyer.phone,
+                buyer_cpf: buyer.cpf || '00000000000',
+                buyer_phone: buyer.phone || '11999999999',
                 amount: totalAmountCents,
                 payment_method,
                 status: charge?.status === 'paid' ? 'paid' : 'pending',
                 pagarme_order_id: pagarmeOrder.id,
-                pagarme_charge_id: charge?.id,
-                metadata: { cart: items_cart, store_slug }
+                pagarme_charge_id: charge?.id
+                // metadata: { cart: items_cart, store_slug } -- This column doesn't exist in schema yet
             };
 
             if (payment_method === 'pix' && charge?.last_transaction) {

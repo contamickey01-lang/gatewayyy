@@ -1,16 +1,17 @@
 import { NextResponse } from 'next/server';
 import axios from 'axios';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 export async function POST(req: Request) {
     try {
         const body = await req.json();
+        const method = body.payment_method === 'card' ? 'credit_card' : body.payment_method;
 
         // Proxy to external backend
         const response = await axios.post(`${BACKEND_URL}/checkout/store-checkout`, {
             items_cart: body.items,
-            payment_method: body.payment_method,
+            payment_method: method,
             buyer: {
                 email: body.email,
                 name: body.name || 'Cliente Loja',
