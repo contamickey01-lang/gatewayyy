@@ -277,6 +277,7 @@ class CheckoutController {
 
             res.status(201).json(response);
         } catch (error) {
+            console.error('Store Checkout Error:', error.response?.data || error.message || error);
             next(error);
         }
     }
