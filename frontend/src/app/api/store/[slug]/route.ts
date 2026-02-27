@@ -10,17 +10,28 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
 
     try {
         // 1. Get store owner info
+        // Simple eq with slug, since it should be sanitized
         const { data: users, error: userError } = await supabase
             .from('users')
-            .select('id, name, store_name, store_description, store_theme, store_banner_url, avatar_url')
-            .eq('store_slug', slug)
-            .eq('store_active', true);
+            .select('id, name, store_name, store_description, store_theme, store_banner_url, avatar_url, store_active')
+            .ilike('store_slug', slug);
 
-        if (userError || !users || users.length === 0) {
-            return jsonError('Loja não encontrada ou inativa', 404);
+        if (userError) {
+            console.error('Supabase user slug error:', userError);
+            return jsonError('Erro ao buscar loja', 500);
+        }
+
+        if (!users || users.length === 0) {
+            console.log(`Store not found for slug: ${slug}`);
+            return jsonError('Loja não encontrada', 404);
         }
 
         const user = users[0];
+
+        if (!user.store_active) {
+            console.log(`Store found but inactive for slug: ${slug}`);
+            return jsonError('Loja inativa', 404);
+        }
 
         // 2. Get categories
         const { data: categories } = await supabase
