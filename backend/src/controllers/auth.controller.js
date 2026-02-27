@@ -253,13 +253,16 @@ class AuthController {
                 }
             });
 
+            console.log(`[BACKEND AUTH] Updating user ${req.user.id}:`, JSON.stringify(updates));
 
             updates.updated_at = new Date().toISOString();
 
-            const { error } = await supabase
+            const { error, count, status } = await supabase
                 .from('users')
                 .update(updates)
                 .eq('id', req.user.id);
+
+            console.log(`[BACKEND AUTH] Supabase update: status=${status}, rows_affected=${count}, error=`, error);
 
             if (error) throw error;
 
@@ -273,8 +276,17 @@ class AuthController {
 
             const user = updatedData && updatedData.length > 0 ? updatedData[0] : {};
             if (user.password_hash) delete user.password_hash;
+
+            console.log(`[BACKEND AUTH] Final user after update:`, JSON.stringify({
+                id: user.id,
+                email: user.email,
+                store_slug: user.store_slug,
+                store_active: user.store_active
+            }));
+
             res.json({ user, message: 'Perfil atualizado com sucesso!' });
         } catch (error) {
+            console.error('[BACKEND AUTH] updateProfile error:', error);
             next(error);
         }
     }

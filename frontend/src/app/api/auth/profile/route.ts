@@ -62,7 +62,8 @@ export async function PUT(req: NextRequest) {
             }
         }
 
-        console.log(`Updating profile for user ${auth.user.id}:`, updateData);
+        console.log(`[AUTH API] Attempting to update profile for user ID: ${auth.user.id}`);
+        console.log(`[AUTH API] Data to update:`, JSON.stringify(updateData));
 
         if (Object.keys(updateData).length === 0) {
             return jsonError('Nenhum dado para atualizar');
@@ -73,24 +74,36 @@ export async function PUT(req: NextRequest) {
             .update(updateData)
             .eq('id', auth.user.id);
 
-        console.log(`Supabase update response: status=${status}, rows_affected=${count}, error=`, error);
+        console.log(`[AUTH API] Supabase update response: status=${status}, rows_affected=${count}, error=`, error);
 
         if (error) {
-            console.error('Supabase profile update error:', error);
-            return jsonError(`Erro ao atualizar perfil: ${error.message}`);
+            console.error('[AUTH API] Supabase profile update error:', error);
+            return jsonError(`Erro ao atualizar perfil no banco: ${error.message}`);
         }
 
         // Fetch user after update without .single()
-        const { data: users } = await supabase
+        const { data: users, error: fetchError } = await supabase
             .from('users')
             .select('*')
             .eq('id', auth.user.id);
 
+        if (fetchError) {
+            console.error('[AUTH API] Error fetching updated user:', fetchError);
+        }
+
         const user = users?.[0];
 
         if (!user) {
+            console.error('[AUTH API] No user found after update for ID:', auth.user.id);
             return jsonError('Erro ao recuperar perfil atualizado');
         }
+
+        console.log(`[AUTH API] Final updated user in DB:`, JSON.stringify({
+            id: user.id,
+            email: user.email,
+            store_slug: user.store_slug,
+            store_active: user.store_active
+        }));
 
         // Sync with Pagar.me if bank details are provided
         if (body.bank_name && body.bank_agency && body.bank_account) {
@@ -138,20 +151,12 @@ export async function PUT(req: NextRequest) {
                     account_type: body.bank_account_type || 'checking'
                 };
 
-                // Logic: 
-                // 1. If no recipient exists OR document changed -> Create NEW recipient
-                // 2. If recipient exists AND document is same -> Update EXISTING recipient
-
                 const isTestRecipient = existingRecipient?.pagarme_recipient_id?.startsWith('re_test_');
 
                 if (existingRecipient && !documentChanged && !isTestRecipient) {
-                    // Update existing real recipient
                     await PagarmeService.updateRecipient(existingRecipient.pagarme_recipient_id, recipientData);
                 } else {
-                    // Create new recipient (either first time or replacement due to CPF change)
                     const pRecipient = await PagarmeService.createRecipient(recipientData);
-
-                    // Update local database with the new ID
                     if (existingRecipient) {
                         await supabase
                             .from('recipients')
@@ -168,8 +173,9 @@ export async function PUT(req: NextRequest) {
                 }
             } catch (pError: any) {
                 const errorDetail = pError.response?.data?.message || pError.message;
-                console.error('Pagar.me sync error:', JSON.stringify(pError.response?.data || pError.message, null, 2));
-                return jsonError(`Erro ao configurar recebedor no Pagar.me: ${errorDetail}`);
+                console.error('[AUTH API] Pagar.me sync error:', JSON.stringify(pError.response?.data || pError.message, null, 2));
+                // We return success for profile even if Pagarme fails, but with message
+                return jsonSuccess({ user, message: 'Perfil salvo, mas erro ao sincronizar Pagar.me: ' + errorDetail });
             }
         }
 
