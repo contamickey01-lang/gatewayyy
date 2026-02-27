@@ -64,7 +64,8 @@ export class PagarmeService {
         };
 
         // Add split rules at root level (matched to backend)
-        if (data.seller_recipient_id && platformRecipientId && data.platform_fee_percentage > 0) {
+        // CRITICAL FIX: Skip split if seller is the platform (Pagar.me forbids split to same recipient)
+        if (data.seller_recipient_id && platformRecipientId && data.platform_fee_percentage > 0 && data.seller_recipient_id !== platformRecipientId) {
             orderData.split = [
                 {
                     amount: sellerPercentage,
