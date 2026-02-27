@@ -67,43 +67,51 @@ export async function POST(req: Request) {
         const lastTransaction = charge?.last_transaction;
         const totalAmountCents = pagarmeOrder.amount;
 
-        console.log('Pagar.me Order Created:', pagarmeOrder.id, 'Status:', pagarmeOrder.status);
+        console.log('--- PAGARME ORDER RESPONSE ---');
+        console.log('Order ID:', pagarmeOrder.id, '| Status:', pagarmeOrder.status);
+        console.log('Charge Status:', charge?.status);
 
-        // 5. Save Order to Supabase
+        // 5. Save Order to Supabase with Bulletproof Extraction
         const orderData: any = {
             product_id: items_cart[0].id,
             seller_id: sellerId,
             buyer_name: name || 'Cliente',
             buyer_email: email,
-            buyer_cpf: cpf || '00000000000',
-            buyer_phone: phone || '11999999999',
+            buyer_cpf: cpf?.replace(/\D/g, '') || '00000000000',
+            buyer_phone: phone?.replace(/\D/g, '') || '11999999999',
             amount: totalAmountCents,
             amount_display: (totalAmountCents / 100).toFixed(2),
             payment_method: method,
             status: charge?.status === 'paid' ? 'paid' : 'pending',
             pagarme_order_id: pagarmeOrder.id,
-            pagarme_charge_id: charge?.id
+            pagarme_charge_id: charge?.id,
+            installments: body.card_data?.installments || 1
         };
 
-        // Standardized Extraction (Exactly like working backend)
-        if (method === 'pix' && lastTransaction) {
-            orderData.pix_qr_code = lastTransaction.qr_code;
-            orderData.pix_qr_code_url = lastTransaction.qr_code_url;
-            orderData.pix_expires_at = lastTransaction.expires_at;
+        // EXTREMELY ROBUST PIX EXTRACTION
+        if (method === 'pix') {
+            // Search in multiple possible locations (matched to backend + robust fallbacks)
+            const pixInfo = lastTransaction?.pix || lastTransaction || pagarmeOrder.payments?.[0]?.pix;
 
-            // Fallback for different Pagar.me versions (Robustness)
-            if (!orderData.pix_qr_code && lastTransaction.pix) {
-                orderData.pix_qr_code = lastTransaction.pix.qr_code;
-                orderData.pix_qr_code_url = lastTransaction.pix.qr_code_url;
-                orderData.pix_expires_at = lastTransaction.pix.expires_at;
+            orderData.pix_qr_code = pixInfo?.qr_code || lastTransaction?.qr_code;
+            orderData.pix_qr_code_url = pixInfo?.qr_code_url || lastTransaction?.qr_code_url;
+            orderData.pix_expires_at = pixInfo?.expires_at || lastTransaction?.expires_at;
+
+            console.log('Pix Extraction Results:', {
+                code: !!orderData.pix_qr_code,
+                url: !!orderData.pix_qr_code_url,
+                expiry: !!orderData.pix_expires_at
+            });
+
+            if (!orderData.pix_qr_code) {
+                console.error('CRITICAL: Pix QR Code not found! Dumping charge object for debug.');
+                console.error(JSON.stringify(charge, null, 2));
             }
-            console.log('Pix Data Found:', !!orderData.pix_qr_code);
         }
 
         if (method === 'credit_card' && lastTransaction) {
             orderData.card_last_digits = lastTransaction.card?.last_four_digits;
             orderData.card_brand = lastTransaction.card?.brand;
-            orderData.installments = body.card_data?.installments || 1;
         }
 
         const { data: order, error: orderError } = await supabase
@@ -113,7 +121,7 @@ export async function POST(req: Request) {
             .single();
 
         if (orderError) {
-            console.error('Order save error:', orderError);
+            console.error('Supabase Order Save Error:', orderError);
             throw orderError;
         }
 
