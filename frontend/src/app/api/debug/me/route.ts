@@ -18,7 +18,6 @@ export async function GET(req: NextRequest) {
     return jsonSuccess({
         session_user: auth.user,
         db_user: dbUser,
-        token_preview: auth.token.substring(0, 20) + '...',
         server_time: new Date().toISOString()
     });
 }
