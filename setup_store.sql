@@ -38,6 +38,22 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS store_theme TEXT DEFAULT 'light';
 ALTER TABLE users ADD COLUMN IF NOT EXISTS store_banner_url TEXT;
 
 -- 6. Garantir que o RLS de usuários permita a leitura pública do perfil de loja
+-- Se o RLS estiver ativado na tabela de usuários, precisamos permitir que 
+-- qualquer um veja as colunas da loja dos usuários ativos.
+
+DROP POLICY IF EXISTS "Public can view store profiles" ON users;
 CREATE POLICY "Public can view store profiles" 
 ON users FOR SELECT 
 USING (store_active = true);
+
+-- Caso a tabela de usuários não tenha RLS ativado, mas você queira ativar:
+-- ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+
+-- 7. Verificar se os produtos também estão visíveis publicamente
+DROP POLICY IF EXISTS "Public can view store products" ON products;
+CREATE POLICY "Public can view store products" 
+ON products FOR SELECT 
+USING (show_in_store = true AND status = 'active');
+
+-- 8. Adicionar índice para busca rápida por slug
+CREATE INDEX IF NOT EXISTS idx_users_store_slug ON users(store_slug);
