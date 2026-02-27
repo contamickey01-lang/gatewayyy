@@ -45,12 +45,25 @@ export default function StoreSettingsPage() {
     const handleSave = async () => {
         setSaving(true);
         try {
+            console.log('SENDING UPDATE:', form);
             const { data } = await authAPI.updateProfile(form);
-            if (data.user) {
-                localStorage.setItem('user', JSON.stringify(data.user));
+            const updatedUser = data.user || data;
+
+            if (updatedUser) {
+                localStorage.setItem('user', JSON.stringify(updatedUser));
+                // Force update form with what server actually saved
+                setForm({
+                    store_active: updatedUser.store_active || false,
+                    store_name: updatedUser.store_name || '',
+                    store_slug: updatedUser.store_slug || '',
+                    store_description: updatedUser.store_description || '',
+                    store_theme: updatedUser.store_theme || 'light',
+                    store_banner_url: updatedUser.store_banner_url || ''
+                });
             }
             toast.success('Configurações da loja salvas com sucesso!');
         } catch (error: any) {
+            console.error('SAVE ERROR:', error.response?.data || error.message);
             toast.error(error.response?.data?.error || 'Erro ao salvar loja');
         } finally {
             setSaving(false);
