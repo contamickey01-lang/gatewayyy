@@ -58,9 +58,9 @@ class PagarmeService {
                     code: item.id
                 })),
                 customer: {
-                    name: buyer.name,
+                    name: buyer.name || 'Cliente',
                     email: buyer.email,
-                    document: buyer.cpf?.replace(/[^\d]/g, ''),
+                    document: buyer.cpf?.replace(/[^\d]/g, '') || '00000000000',
                     type: 'individual',
                     phones: {
                         mobile_phone: {
@@ -70,48 +70,44 @@ class PagarmeService {
                         }
                     }
                 },
-                payments: [],
-                split: [
+                payments: []
+            };
+
+            // Add split rules ONLY if both IDs exist
+            if (platformRecipientId && sellerRecipientId && feePercentage > 0) {
+                orderData.split = [
                     {
                         amount: sellerPercentage,
                         recipient_id: sellerRecipientId,
                         type: 'percentage',
-                        options: {
-                            charge_processing_fee: true,
-                            liable: true
-                        }
+                        options: { charge_processing_fee: true, liable: true }
                     },
                     {
                         amount: feePercentage,
                         recipient_id: platformRecipientId,
                         type: 'percentage',
-                        options: {
-                            charge_processing_fee: false,
-                            liable: false
-                        }
+                        options: { charge_processing_fee: false, liable: false }
                     }
-                ]
-            };
+                ];
+            }
 
             // Add payment method
             if (paymentMethod === 'pix') {
                 orderData.payments.push({
                     payment_method: 'pix',
-                    pix: {
-                        expires_in: 86400 // 24 hours as per image
-                    }
+                    pix: { expires_in: 86400 }
                 });
             } else if (paymentMethod === 'credit_card') {
                 orderData.payments.push({
                     payment_method: 'credit_card',
                     credit_card: {
-                        installments: cardData.installments || 1,
+                        installments: cardData?.installments || 1,
                         card: {
-                            number: cardData.number,
-                            holder_name: cardData.holder_name,
-                            exp_month: cardData.exp_month,
-                            exp_year: cardData.exp_year,
-                            cvv: cardData.cvv
+                            number: cardData?.number,
+                            holder_name: cardData?.holder_name,
+                            exp_month: cardData?.exp_month,
+                            exp_year: cardData?.exp_year,
+                            cvv: cardData?.cvv
                         },
                         billing_address: {
                             line_1: buyer.address || 'Rua Teste, 123',
@@ -138,7 +134,7 @@ class PagarmeService {
      */
     async createOrder({ product, buyer, paymentMethod, cardData, sellerId, platformRecipientId, sellerRecipientId, feePercentage }) {
         try {
-            const sellerPercentage = 100 - feePercentage;
+            const sellerPercentage = 100 - (feePercentage || 0);
 
             const orderData = {
                 items: [{
@@ -148,9 +144,9 @@ class PagarmeService {
                     code: product.id
                 }],
                 customer: {
-                    name: buyer.name,
+                    name: buyer.name || 'Cliente',
                     email: buyer.email,
-                    document: buyer.cpf?.replace(/[^\d]/g, ''),
+                    document: buyer.cpf?.replace(/[^\d]/g, '') || '00000000000',
                     type: 'individual',
                     phones: {
                         mobile_phone: {
@@ -160,48 +156,44 @@ class PagarmeService {
                         }
                     }
                 },
-                payments: [],
-                split: [
+                payments: []
+            };
+
+            // Add split rules ONLY if both IDs exist
+            if (platformRecipientId && sellerRecipientId && feePercentage > 0) {
+                orderData.split = [
                     {
                         amount: sellerPercentage,
                         recipient_id: sellerRecipientId,
                         type: 'percentage',
-                        options: {
-                            charge_processing_fee: true,
-                            liable: true
-                        }
+                        options: { charge_processing_fee: true, liable: true }
                     },
                     {
                         amount: feePercentage,
                         recipient_id: platformRecipientId,
                         type: 'percentage',
-                        options: {
-                            charge_processing_fee: false,
-                            liable: false
-                        }
+                        options: { charge_processing_fee: false, liable: false }
                     }
-                ]
-            };
+                ];
+            }
 
             // Add payment method
             if (paymentMethod === 'pix') {
                 orderData.payments.push({
                     payment_method: 'pix',
-                    pix: {
-                        expires_in: 3600 // 1 hour for direct link
-                    }
+                    pix: { expires_in: 3600 }
                 });
             } else if (paymentMethod === 'credit_card') {
                 orderData.payments.push({
                     payment_method: 'credit_card',
                     credit_card: {
-                        installments: cardData.installments || 1,
+                        installments: cardData?.installments || 1,
                         card: {
-                            number: cardData.number,
-                            holder_name: cardData.holder_name,
-                            exp_month: cardData.exp_month,
-                            exp_year: cardData.exp_year,
-                            cvv: cardData.cvv
+                            number: cardData?.number,
+                            holder_name: cardData?.holder_name,
+                            exp_month: cardData?.exp_month,
+                            exp_year: cardData?.exp_year,
+                            cvv: cardData?.cvv
                         },
                         billing_address: {
                             line_1: buyer.address || 'Rua Teste, 123',

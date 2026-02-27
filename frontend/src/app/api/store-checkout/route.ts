@@ -23,9 +23,23 @@ export async function POST(req: Request) {
 
         return NextResponse.json(response.data);
     } catch (err: any) {
+        let errorMessage = 'Erro ao processar checkout';
+
+        if (err.response?.data?.error) {
+            errorMessage = err.response.data.error;
+            if (err.response.data.details) {
+                console.error('Details:', err.response.data.details);
+            }
+        } else if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND') {
+            errorMessage = 'O servidor backend está offline ou inacessível (Verifique se o backend está rodando e a URL está correta)';
+        } else if (!err.response) {
+            errorMessage = `Falha de rede: ${err.message}`;
+        }
+
         console.error('Store Checkout Proxy Error:', err.response?.data || err.message);
+
         return NextResponse.json(
-            { error: err.response?.data?.error || 'Erro ao processar checkout' },
+            { error: errorMessage },
             { status: err.response?.status || 500 }
         );
     }
