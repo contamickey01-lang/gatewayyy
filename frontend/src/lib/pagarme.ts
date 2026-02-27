@@ -96,19 +96,26 @@ export class PagarmeService {
                     additional_information: [{ name: 'Plataforma', value: process.env.PLATFORM_NAME || 'PayGateway' }]
                 }
             });
-        } else if (data.payment_method === 'credit_card') {
+        } else if (data.payment_method === 'credit_card' || data.payment_method === 'card') {
+            const card = data.card_data || {};
+            const cleanNumber = String(card.number || '').replace(/\D/g, '');
+            const expMonth = parseInt(String(card.exp_month || '0')) || 1;
+            const rawYear = String(card.exp_year || '0');
+            const expYear = parseInt(rawYear.length === 2 ? `20${rawYear}` : rawYear) || 2026;
+            const installments = parseInt(String(card.installments || '1')) || 1;
+
             orderData.payments.push({
                 payment_method: 'credit_card',
                 credit_card: {
-                    installments: data.card_data?.installments || 1,
+                    installments: installments,
                     card: {
-                        number: data.card_data.number,
-                        holder_name: data.card_data.holder_name,
-                        exp_month: data.card_data.exp_month,
-                        exp_year: data.card_data.exp_year,
-                        cvv: data.card_data.cvv
+                        number: cleanNumber,
+                        holder_name: card.holder_name,
+                        exp_month: expMonth,
+                        exp_year: expYear,
+                        cvv: card.cvv
                     },
-                    billing_address: data.card_data.billing_address || {
+                    billing_address: card.billing_address || {
                         line_1: 'Rua Teste, 123',
                         zip_code: '01001000',
                         city: 'São Paulo',
@@ -195,19 +202,26 @@ export class PagarmeService {
                 payment_method: 'pix',
                 pix: { expires_in: 3600 }
             });
-        } else if (data.payment_method === 'credit_card') {
+        } else if (data.payment_method === 'credit_card' || data.payment_method === 'card') {
+            const card = data.card_data || {};
+            const cleanNumber = String(card.number || '').replace(/\D/g, '');
+            const expMonth = parseInt(String(card.exp_month || '0')) || 1;
+            const rawYear = String(card.exp_year || '0');
+            const expYear = parseInt(rawYear.length === 2 ? `20${rawYear}` : rawYear) || 2026;
+            const installments = parseInt(String(card.installments || '1')) || 1;
+
             orderData.payments.push({
                 payment_method: 'credit_card',
                 credit_card: {
-                    installments: data.card_data?.installments || 1,
+                    installments: installments,
                     card: {
-                        number: data.card_data.number,
-                        holder_name: data.card_data.holder_name,
-                        exp_month: data.card_data.exp_month,
-                        exp_year: data.card_data.exp_year,
-                        cvv: data.card_data.cvv
+                        number: cleanNumber,
+                        holder_name: card.holder_name,
+                        exp_month: expMonth,
+                        exp_year: expYear,
+                        cvv: card.cvv
                     },
-                    billing_address: data.card_data.billing_address || {
+                    billing_address: card.billing_address || {
                         line_1: 'Rua Teste, 123',
                         zip_code: '01001000',
                         city: 'São Paulo',

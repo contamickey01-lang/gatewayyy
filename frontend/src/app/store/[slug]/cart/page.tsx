@@ -199,6 +199,19 @@ export default function CartPage() {
                                         />
                                     </div>
 
+                                    <div style={{ marginBottom: 16 }}>
+                                        <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 8 }}>Parcelamento</label>
+                                        <select
+                                            value={cardData.installments}
+                                            onChange={e => setCardData({ ...cardData, installments: parseInt(e.target.value) })}
+                                            style={{ width: '100%', background: '#0a0a0c', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12, padding: '14px 16px', color: 'white', boxSizing: 'border-box', outline: 'none' }}
+                                        >
+                                            {[...Array(12)].map((_, i) => (
+                                                <option key={i + 1} value={i + 1}>{i + 1}x de R$ {(totalAmount / (i + 1)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
                                         <div>
                                             <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 8 }}>Mês</label>
