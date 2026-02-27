@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
 
     const { data: users } = await supabase
         .from('users')
-        .select('*') // Fetch all fields including bank and address info
+        .select('*')
         .eq('id', auth.user.id);
 
     return jsonSuccess({ user: users?.[0] });
@@ -33,7 +33,7 @@ export async function PUT(req: NextRequest) {
         // Fetch old user to detect changes in critical fields (like document) without .single()
         const { data: usersOld } = await supabase
             .from('users')
-            .select('cpf_cnpj')
+            .select('cpf_cnpj, id')
             .eq('id', auth.user.id);
 
         const oldUser = usersOld?.[0];
@@ -62,10 +62,18 @@ export async function PUT(req: NextRequest) {
             }
         }
 
-        const { error } = await supabase
+        console.log(`Updating profile for user ${auth.user.id}:`, updateData);
+
+        if (Object.keys(updateData).length === 0) {
+            return jsonError('Nenhum dado para atualizar');
+        }
+
+        const { error, count, status } = await supabase
             .from('users')
             .update(updateData)
             .eq('id', auth.user.id);
+
+        console.log(`Supabase update response: status=${status}, rows_affected=${count}, error=`, error);
 
         if (error) {
             console.error('Supabase profile update error:', error);
