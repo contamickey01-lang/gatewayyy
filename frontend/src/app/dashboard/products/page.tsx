@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { productsAPI } from '@/lib/api';
 import toast from 'react-hot-toast';
@@ -219,111 +220,91 @@ export default function ProductsPage() {
             )}
 
             {/* Modal */}
-            {showModal && (
-                <div style={{
-                    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)',
-                    display: 'grid', placeItems: 'center', zIndex: 100, padding: '40px 24px', overflowY: 'auto'
-                }}>
-                    <div className="glass-card animate-fade-in" style={{
-                        width: '100%', maxWidth: 740, padding: 32,
-                        maxHeight: '90vh', overflowY: 'auto'
-                    }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                            <h2 style={{ fontSize: 20, fontWeight: 700 }}>{editing ? 'Editar Produto' : 'Novo Produto'}</h2>
-                            <button type="button" onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+            {showModal && createPortal(
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                    <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: 500, padding: 40, maxHeight: '90vh', overflowY: 'auto' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24 }}>
+                            <h3 style={{ fontSize: 18, fontWeight: 700 }}>{editing ? 'Editar Produto' : 'Novo Produto'}</h3>
+                            <button type="button" onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
                                 <FiX size={20} />
                             </button>
                         </div>
 
                         <form onSubmit={handleSubmit}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 24, marginBottom: 24 }}>
-                                @media (min-width: 768px) {
-                                    /* Handle grid for desktop gracefully via react style */
-                                }
+                            <div style={{ marginBottom: 16 }}>
+                                <label style={{ display: 'block', fontSize: 13, color: 'var(--text-secondary)', marginBottom: 6 }}>Nome do produto</label>
+                                <input type="text" className="input-field" placeholder="Ex: Curso de Marketing Digital" required
+                                    value={form.name} onChange={e => update('name', e.target.value)} />
                             </div>
 
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 24, marginBottom: 24 }}>
-                                {/* Left Column */}
-                                <div style={{ flex: '1 1 350px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 6 }}>Nome do produto</label>
-                                        <input type="text" className="input-field" placeholder="Ex: Curso de Marketing Digital" required
-                                            value={form.name} onChange={e => update('name', e.target.value)} />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 6 }}>Descrição</label>
-                                        <textarea className="input-field" placeholder="Descreva seu produto..." rows={4}
-                                            value={form.description} onChange={e => update('description', e.target.value)}
-                                            style={{ resize: 'vertical' }} />
-                                    </div>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                                        <div>
-                                            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 6 }}>Preço (R$)</label>
-                                            <input type="number" step="0.01" min="0.01" className="input-field" placeholder="99.90" required
-                                                value={form.price} onChange={e => update('price', e.target.value)} />
-                                        </div>
-                                        <div>
-                                            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 6 }}>Tipo</label>
-                                            <select className="input-field" value={form.type} onChange={e => update('type', e.target.value)}>
-                                                <option value="digital">Digital</option>
-                                                <option value="physical">Físico</option>
-                                            </select>
-                                        </div>
-                                    </div>
+                            <div style={{ marginBottom: 16 }}>
+                                <label style={{ display: 'block', fontSize: 13, color: 'var(--text-secondary)', marginBottom: 6 }}>Descrição</label>
+                                <textarea className="input-field" placeholder="Descreva seu produto..." rows={2}
+                                    value={form.description} onChange={e => update('description', e.target.value)}
+                                    style={{ resize: 'vertical' }} />
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: 13, color: 'var(--text-secondary)', marginBottom: 6 }}>Preço (R$)</label>
+                                    <input type="number" step="0.01" min="0.01" className="input-field" placeholder="99.90" required
+                                        value={form.price} onChange={e => update('price', e.target.value)} />
                                 </div>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: 13, color: 'var(--text-secondary)', marginBottom: 6 }}>Tipo</label>
+                                    <select className="input-field" value={form.type} onChange={e => update('type', e.target.value)}>
+                                        <option value="digital">Digital</option>
+                                        <option value="physical">Físico</option>
+                                    </select>
+                                </div>
+                            </div>
 
-                                {/* Right Column */}
-                                <div style={{ flex: '1 1 250px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                                        <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 6 }}>Imagem do produto</label>
-                                        <div style={{
-                                            border: '2px dashed var(--border-color)',
-                                            borderRadius: 12,
-                                            padding: 20,
-                                            textAlign: 'center',
-                                            position: 'relative',
-                                            cursor: 'pointer',
-                                            transition: 'border-color 0.2s',
-                                            overflow: 'hidden',
-                                            flex: 1,
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            minHeight: 140
-                                        }} onClick={() => document.getElementById('fileInput')?.click()}>
-                                            {imagePreview ? (
-                                                <img src={imagePreview} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.3 }} alt="Preview" />
-                                            ) : null}
-
-                                            <div style={{ position: 'relative', zIndex: 1 }}>
-                                                <FiUpload size={24} style={{ marginBottom: 8, color: 'var(--accent-secondary)' }} />
-                                                <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                                                    {selectedFile ? selectedFile.name : 'Clique para subir uma imagem'}
-                                                </p>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16, marginBottom: 24 }}>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: 13, color: 'var(--text-secondary)', marginBottom: 6 }}>Imagem do produto</label>
+                                    <div style={{
+                                        border: '1px dashed var(--border-color)',
+                                        background: 'rgba(255,255,255,0.02)',
+                                        borderRadius: 12,
+                                        padding: 12,
+                                        position: 'relative',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 12
+                                    }} onClick={() => document.getElementById('fileInput')?.click()}>
+                                        {imagePreview ? (
+                                            <img src={imagePreview} style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover' }} alt="Preview" />
+                                        ) : (
+                                            <div style={{ width: 40, height: 40, borderRadius: 8, background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                <FiImage size={18} style={{ color: 'var(--text-muted)' }} />
                                             </div>
-                                            <input id="fileInput" type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
+                                        )}
+                                        <div style={{ flex: 1 }}>
+                                            <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 2, display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                                {selectedFile ? selectedFile.name : 'Selecione uma imagem'}
+                                            </p>
+                                            <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>JPG, PNG ou GIF. Máx 2MB.</p>
                                         </div>
+                                        <input id="fileInput" type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
                                     </div>
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 6 }}>Status</label>
-                                        <select className="input-field" value={form.status} onChange={e => update('status', e.target.value)}>
-                                            <option value="active">Ativo</option>
-                                            <option value="inactive">Inativo</option>
-                                        </select>
-                                    </div>
+                                </div>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: 13, color: 'var(--text-secondary)', marginBottom: 6 }}>Status</label>
+                                    <select className="input-field" value={form.status} onChange={e => update('status', e.target.value)}>
+                                        <option value="active">Ativo</option>
+                                        <option value="inactive">Inativo</option>
+                                    </select>
                                 </div>
                             </div>
 
-                            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', borderTop: '1px solid var(--border-color)', paddingTop: 20 }}>
-                                <button type="button" className="btn-secondary" onClick={() => setShowModal(false)} disabled={uploading}>Cancelar</button>
-                                <button type="submit" className="btn-primary" disabled={uploading} style={{ minWidth: 160 }}>
-                                    {uploading ? 'Salvando...' : (editing ? 'Salvar Alterações' : 'Criar Produto')}
-                                </button>
-                            </div>
+                            <button type="submit" className="btn-primary" disabled={uploading} style={{ width: '100%' }}>
+                                {uploading ? 'Salvando...' : (editing ? 'Salvar Alterações' : 'Criar Produto')}
+                            </button>
                         </form>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );
