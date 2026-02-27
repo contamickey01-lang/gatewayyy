@@ -28,6 +28,12 @@ export default function CartPage() {
     const [paymentMethod, setPaymentMethod] = useState<'pix' | 'card'>('pix');
     const [loading, setLoading] = useState(false);
 
+    const formatCardNumber = (value: string) => {
+        const digits = value.replace(/\D/g, '');
+        const groups = digits.match(/.{1,4}/g) || [];
+        return groups.join(' ').substring(0, 19);
+    };
+
     const handleCheckout = async () => {
         if (items.length === 0) return toast.error("Carrinho vazio!");
 
@@ -187,7 +193,7 @@ export default function CartPage() {
                                         <input
                                             placeholder="0000 0000 0000 0000"
                                             value={cardData.number}
-                                            onChange={e => setCardData({ ...cardData, number: e.target.value })}
+                                            onChange={e => setCardData({ ...cardData, number: formatCardNumber(e.target.value) })}
                                             style={{ width: '100%', background: '#0a0a0c', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12, padding: '14px 16px', color: 'white', boxSizing: 'border-box' }}
                                         />
                                     </div>
