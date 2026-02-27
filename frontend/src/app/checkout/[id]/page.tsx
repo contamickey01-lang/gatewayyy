@@ -38,6 +38,31 @@ export default function CheckoutPage() {
         name: '', email: '', cpf: '', phone: '',
         card_number: '', card_holder: '', card_exp_month: '', card_exp_year: '', card_cvv: '', installments: 1
     });
+    const [address, setAddress] = useState({
+        cep: '', street: '', number: '', complement: '', neighborhood: '', city: '', state: ''
+    });
+
+    const handleCepLookup = async (cep: string) => {
+        const cleanCep = cep.replace(/\D/g, '');
+        setAddress(prev => ({ ...prev, cep: cleanCep }));
+        if (cleanCep.length === 8) {
+            try {
+                const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+                const data = await response.json();
+                if (!data.erro) {
+                    setAddress(prev => ({
+                        ...prev,
+                        street: data.logradouro,
+                        neighborhood: data.bairro,
+                        city: data.localidade,
+                        state: data.uf
+                    }));
+                }
+            } catch (err) {
+                console.error('CEP lookup error:', err);
+            }
+        }
+    };
 
     useEffect(() => {
         if (params.id) loadProduct(params.id as string);
@@ -109,7 +134,19 @@ export default function CheckoutPage() {
         try {
             const payload: any = {
                 product_id: params.id, payment_method: paymentMethod,
-                buyer: { name: form.name, email: form.email, cpf: form.cpf, phone: form.phone }
+                buyer: {
+                    name: form.name, email: form.email, cpf: form.cpf, phone: form.phone,
+                    address: {
+                        line_1: `${address.street}, ${address.number}${address.complement ? ', ' + address.complement : ''}`,
+                        zip_code: address.cep.replace(/\D/g, ''),
+                        city: address.city,
+                        state: address.state,
+                        country: 'BR',
+                        street: address.street,
+                        number: address.number,
+                        neighborhood: address.neighborhood
+                    }
+                }
             };
             if (paymentMethod === 'credit_card') {
                 payload.card_data = {
@@ -380,6 +417,50 @@ export default function CheckoutPage() {
                             <label style={{ fontSize: 13, fontWeight: 500, color: textSecondary, marginBottom: 6, display: 'block' }}>Telefone</label>
                             <input placeholder="(11) 99999-9999" required value={form.phone} onChange={e => update('phone', e.target.value)}
                                 style={{ width: '100%', padding: '12px 16px', borderRadius: 10, border: `1px solid ${borderColor}`, background: inputBg, color: textPrimary, fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
+                        </div>
+
+                        {/* Address Fields */}
+                        <div style={{ marginBottom: 24, padding: 20, background: 'rgba(255,255,255,0.02)', borderRadius: 16, border: `1px solid ${borderColor}` }}>
+                            <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 16 }}>Endereço de Cobrança</h3>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 12, marginBottom: 12 }}>
+                                <div>
+                                    <label style={{ fontSize: 12, color: textMuted, marginBottom: 4, display: 'block' }}>CEP</label>
+                                    <input placeholder="00000-000" required value={address.cep} onChange={e => handleCepLookup(e.target.value)}
+                                        style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: `1px solid ${borderColor}`, background: inputBg, color: textPrimary, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: 12, color: textMuted, marginBottom: 4, display: 'block' }}>Rua</label>
+                                    <input placeholder="Av. Brasil" required value={address.street} onChange={e => setAddress({ ...address, street: e.target.value })}
+                                        style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: `1px solid ${borderColor}`, background: inputBg, color: textPrimary, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 12, marginBottom: 12 }}>
+                                <div>
+                                    <label style={{ fontSize: 12, color: textMuted, marginBottom: 4, display: 'block' }}>Número</label>
+                                    <input placeholder="123" required value={address.number} onChange={e => setAddress({ ...address, number: e.target.value })}
+                                        style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: `1px solid ${borderColor}`, background: inputBg, color: textPrimary, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: 12, color: textMuted, marginBottom: 4, display: 'block' }}>Bairro</label>
+                                    <input placeholder="Centro" required value={address.neighborhood} onChange={e => setAddress({ ...address, neighborhood: e.target.value })}
+                                        style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: `1px solid ${borderColor}`, background: inputBg, color: textPrimary, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '2.5fr 1fr', gap: 12 }}>
+                                <div>
+                                    <label style={{ fontSize: 12, color: textMuted, marginBottom: 4, display: 'block' }}>Cidade</label>
+                                    <input placeholder="Cidade" required value={address.city} onChange={e => setAddress({ ...address, city: e.target.value })}
+                                        style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: `1px solid ${borderColor}`, background: inputBg, color: textPrimary, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: 12, color: textMuted, marginBottom: 4, display: 'block' }}>UF</label>
+                                    <input placeholder="UF" maxLength={2} required value={address.state} onChange={e => setAddress({ ...address, state: e.target.value.toUpperCase() })}
+                                        style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: `1px solid ${borderColor}`, background: inputBg, color: textPrimary, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
+                                </div>
+                            </div>
                         </div>
 
                         {/* Payment method */}
