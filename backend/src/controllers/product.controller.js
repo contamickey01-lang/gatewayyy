@@ -5,7 +5,7 @@ class ProductController {
         try {
             const { name, description, price, image_url, type, status } = req.body;
 
-            const { data, error } = await supabase
+            const { data: products, error } = await supabase
                 .from('products')
                 .insert({
                     user_id: req.user.id,
@@ -18,10 +18,10 @@ class ProductController {
                     store_category_id: req.body.store_category_id || null,
                     show_in_store: req.body.show_in_store || false
                 })
-                .select()
-                .single();
+                .select();
 
             if (error) throw error;
+            const data = products && products.length > 0 ? products[0] : null;
 
             res.status(201).json({ product: data, message: 'Produto criado com sucesso!' });
         } catch (error) {
@@ -31,7 +31,7 @@ class ProductController {
 
     async list(req, res, next) {
         try {
-            const { page = 1, limit = 20, status } = req.query;
+            const { page = 1, limit = 20, status, store_category_id } = req.query;
             const offset = (page - 1) * limit;
 
             let query = supabase
@@ -42,124 +42,127 @@ class ProductController {
                 .range(offset, offset + limit - 1);
 
             if (status) {
-                if (status) {
-                    query = query.eq('status', status);
-                }
-
-                if (req.query.store_category_id) {
-                    query = query.eq('store_category_id', req.query.store_category_id);
-                }
-
-                const { data, count, error } = await query;
-                if (error) throw error;
-
-                res.json({
-                    products: data?.map(p => ({ ...p, price_display: (p.price / 100).toFixed(2) })),
-                    total: count,
-                    page: parseInt(page),
-                    totalPages: Math.ceil(count / limit)
-                });
-            } catch (error) {
-                next(error);
+                query = query.eq('status', status);
             }
+
+            if (store_category_id) {
+                query = query.eq('store_category_id', store_category_id);
+            }
+
+            const { data, count, error } = await query;
+            if (error) throw error;
+
+            res.json({
+                products: data?.map(p => ({ ...p, price_display: (p.price / 100).toFixed(2) })),
+                total: count,
+                page: parseInt(page),
+                totalPages: Math.ceil((count || 0) / limit)
+            });
+        } catch (error) {
+            next(error);
         }
+    }
 
     async getById(req, res, next) {
-            try {
-                const { data, error } = await supabase
-                    .from('products')
-                    .select('*')
-                    .eq('id', req.params.id)
-                    .eq('user_id', req.user.id)
-                    .single();
+        try {
+            const { data: products, error } = await supabase
+                .from('products')
+                .select('*')
+                .eq('id', req.params.id)
+                .eq('user_id', req.user.id);
 
-                if (error || !data) {
-                    return res.status(404).json({ error: 'Produto não encontrado.' });
-                }
+            const data = products && products.length > 0 ? products[0] : null;
 
-                res.json({ product: { ...data, price_display: (data.price / 100).toFixed(2) } });
-            } catch (error) {
-                next(error);
+            if (error || !data) {
+                return res.status(404).json({ error: 'Produto não encontrado.' });
             }
+
+            res.json({ product: { ...data, price_display: (data.price / 100).toFixed(2) } });
+        } catch (error) {
+            next(error);
         }
+    }
 
     async update(req, res, next) {
-            try {
-                const allowedFields = ['name', 'description', 'price', 'image_url', 'type', 'status', 'store_category_id', 'show_in_store'];
-                const updates = {};
+        try {
+            const allowedFields = ['name', 'description', 'price', 'image_url', 'type', 'status', 'store_category_id', 'show_in_store'];
+            const updates = {};
 
-                allowedFields.forEach(field => {
-                    if (req.body[field] !== undefined) {
-                        updates[field] = field === 'price' ? Math.round(req.body[field] * 100) : req.body[field];
-                    }
-                });
-                updates.updated_at = new Date().toISOString();
+            allowedFields.forEach(field => {
+                if (req.body[field] !== undefined) {
+                    updates[field] = field === 'price' ? Math.round(req.body[field] * 100) : req.body[field];
+                }
+            });
+            updates.updated_at = new Date().toISOString();
 
-                const { data, error } = await supabase
-                    .from('products')
-                    .update(updates)
-                    .eq('id', req.params.id)
-                    .eq('user_id', req.user.id)
-                    .select()
-                    .single();
+            const { data: products, error } = await supabase
+                .from('products')
+                .update(updates)
+                .eq('id', req.params.id)
+                .eq('user_id', req.user.id)
+                .select();
 
-                if (error) throw error;
-                if (!data) return res.status(404).json({ error: 'Produto não encontrado.' });
+            const data = products && products.length > 0 ? products[0] : null;
 
-                res.json({ product: data, message: 'Produto atualizado com sucesso!' });
-            } catch (error) {
-                next(error);
-            }
+            if (error) throw error;
+            if (!data) return res.status(404).json({ error: 'Produto não encontrado.' });
+
+            res.json({ product: data, message: 'Produto atualizado com sucesso!' });
+        } catch (error) {
+            next(error);
         }
+    }
 
-    async delete (req, res, next) {
-            try {
-                const { error } = await supabase
-                    .from('products')
-                    .delete()
-                    .eq('id', req.params.id)
-                    .eq('user_id', req.user.id);
+    async delete(req, res, next) {
+        try {
+            const { error } = await supabase
+                .from('products')
+                .delete()
+                .eq('id', req.params.id)
+                .eq('user_id', req.user.id);
 
-                if (error) throw error;
+            if (error) throw error;
 
-                res.json({ message: 'Produto excluído com sucesso!' });
-            } catch (error) {
-                next(error);
-            }
+            res.json({ message: 'Produto excluído com sucesso!' });
+        } catch (error) {
+            next(error);
         }
+    }
 
     // Public endpoint - for checkout
     async getPublic(req, res, next) {
-            try {
-                const { data, error } = await supabase
-                    .from('products')
-                    .select('id, name, description, price, image_url, type, user_id')
-                    .eq('id', req.params.id)
-                    .eq('status', 'active')
-                    .single();
+        try {
+            const { data: products, error } = await supabase
+                .from('products')
+                .select('id, name, description, price, image_url, type, user_id')
+                .eq('id', req.params.id)
+                .eq('status', 'active');
 
-                if (error || !data) {
-                    return res.status(404).json({ error: 'Produto não encontrado.' });
-                }
+            const data = products && products.length > 0 ? products[0] : null;
 
-                // Get seller name
-                const { data: seller } = await supabase
-                    .from('users')
-                    .select('name')
-                    .eq('id', data.user_id)
-                    .single();
-
-                res.json({
-                    product: {
-                        ...data,
-                        price_display: (data.price / 100).toFixed(2),
-                        seller_name: seller?.name
-                    }
-                });
-            } catch (error) {
-                next(error);
+            if (error || !data) {
+                return res.status(404).json({ error: 'Produto não encontrado.' });
             }
+
+            // Get seller name
+            const { data: sellers } = await supabase
+                .from('users')
+                .select('name')
+                .eq('id', data.user_id);
+
+            const seller = sellers && sellers.length > 0 ? sellers[0] : null;
+
+            res.json({
+                product: {
+                    ...data,
+                    price_display: (data.price / 100).toFixed(2),
+                    seller_name: seller?.name
+                }
+            });
+        } catch (error) {
+            next(error);
         }
     }
+}
 
 module.exports = new ProductController();

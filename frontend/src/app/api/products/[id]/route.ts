@@ -7,8 +7,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const auth = await getAuthUser(req);
     if (!auth) return jsonError('Não autorizado', 401);
 
-    const { data: product } = await supabase
-        .from('products').select('*').eq('id', id).eq('user_id', auth.user.id).single();
+    const { data: products } = await supabase
+        .from('products').select('*').eq('id', id).eq('user_id', auth.user.id);
+
+    const product = products?.[0];
 
     if (!product) return jsonError('Produto não encontrado', 404);
     return jsonSuccess({ product });
@@ -34,8 +36,14 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         if (body.status) updateData.status = body.status;
         if (body.checkout_settings !== undefined) updateData.checkout_settings = body.checkout_settings;
 
-        const { data: product, error } = await supabase.from('products')
-            .update(updateData).eq('id', id).eq('user_id', auth.user.id).select().single();
+        // Novos campos da loja
+        if (body.store_category_id !== undefined) updateData.store_category_id = body.store_category_id;
+        if (body.show_in_store !== undefined) updateData.show_in_store = body.show_in_store;
+
+        const { data: products, error } = await supabase.from('products')
+            .update(updateData).eq('id', id).eq('user_id', auth.user.id).select();
+
+        const product = products?.[0];
 
         if (error || !product) return jsonError('Erro ao atualizar produto');
         return jsonSuccess({ product });
