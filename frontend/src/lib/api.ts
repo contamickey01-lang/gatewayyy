@@ -38,7 +38,7 @@ export const authAPI = {
     forgotPassword: (email: string) => api.post('/auth/forgot-password', { email }),
     resetPassword: (data: any) => api.post('/auth/reset-password', data),
     getProfile: () => api.get('/auth/profile'),
-    updateProfile: (data: any) => api.put('/auth/profile', data),
+    updateProfile: (data: any) => internalApi.put('/auth/profile', data),
     getKycLink: () => api.post('/auth/recipient/kyc'),
 };
 
@@ -101,17 +101,34 @@ export const memberAPI = {
     getLesson: (lessonId: string) => api.get(`/member/lesson/${lessonId}`),
 };
 
-// Store Categories
+// We create a separate instance for internal Next.js API calls 
+// because main 'api' uses NEXT_PUBLIC_API_URL which points to the external backend.
+const internalApi = axios.create({
+    baseURL: '/api',
+    headers: { 'Content-Type': 'application/json' },
+});
+
+internalApi.interceptors.request.use((config) => {
+    if (typeof window !== 'undefined') {
+        const token = localStorage.getItem('token');
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+    }
+    return config;
+});
+
+// Store Categories (Internal Next.js API)
 export const storeCategoriesAPI = {
-    list: () => api.get('/store-categories'),
-    create: (data: any) => api.post('/store-categories', data),
-    update: (id: string, data: any) => api.put(`/store-categories/${id}`, data),
-    delete: (id: string) => api.delete(`/store-categories/${id}`),
+    list: () => internalApi.get('/store-categories'),
+    create: (data: any) => internalApi.post('/store-categories', data),
+    update: (id: string, data: any) => internalApi.put(`/store-categories/${id}`, data),
+    delete: (id: string) => internalApi.delete(`/store-categories/${id}`),
 };
 
-// Store
+// Store (Internal Next.js API)
 export const storeAPI = {
-    getStoreBySlug: (slug: string, category?: string) => api.get(`/store/${slug}`, { params: { category } }),
+    getStoreBySlug: (slug: string, category?: string) => internalApi.get(`/store/${slug}`, { params: { category } }),
 };
 
 export default api;
