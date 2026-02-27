@@ -31,11 +31,12 @@ export async function getAuthUser(req: NextRequest): Promise<{ user: any; error?
         const token = authHeader.split(' ')[1];
         const decoded: any = verifyToken(token);
 
-        const { data: user } = await supabase
+        const { data: users } = await supabase
             .from('users')
             .select('*')
-            .eq('id', decoded.id)
-            .single();
+            .eq('id', decoded.userId);
+
+        const user = users?.[0];
 
         if (!user || user.status === 'blocked') return null;
         return { user };
