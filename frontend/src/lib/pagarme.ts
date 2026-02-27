@@ -42,14 +42,14 @@ export class PagarmeService {
 
         // Robust Address Object
         const address = {
-            line_1: 'Rua Teste, 123, Bairro Teste',
+            line_1: 'Rua Teste, 123, Centro',
             zip_code: '01001000',
             city: 'São Paulo',
             state: 'SP',
             country: 'BR',
             street: 'Rua Teste',
             number: '123',
-            neighborhood: 'Bairro Teste'
+            neighborhood: 'Centro'
         };
 
         const orderData: any = {
@@ -65,7 +65,7 @@ export class PagarmeService {
                         number: data.customer.phone?.replace(/\D/g, '').substring(2) || '999999999'
                     }
                 },
-                address // Adding address to customer too (often required for antifraud)
+                address
             },
             items: [{
                 amount: data.amount,
@@ -76,7 +76,6 @@ export class PagarmeService {
             payments: []
         };
 
-        // Add split rules at root level (matched to backend)
         const platId = (process.env.PLATFORM_RECIPIENT_ID || '').trim();
         const sellId = (data.seller_recipient_id || '').trim();
         const fee = data.platform_fee_percentage || 0;
@@ -126,11 +125,12 @@ export class PagarmeService {
                         holder_name: card.holder_name || data.customer.name,
                         exp_month: expMonth,
                         exp_year: expYear,
-                        cvv: card.cvv
+                        cvv: card.cvv,
+                        billing_address: address
                     },
-                    // Providing BOTH billing_address and billing objects for maximum compatibility
-                    billing_address: address,
+                    // Mandatory billing object for most anti-fraud configs
                     billing: {
+                        name: data.customer.name || 'Cliente',
                         address: address
                     }
                 }
@@ -141,25 +141,21 @@ export class PagarmeService {
         return response.data;
     }
 
-    /**
-     * Create an order with multiple items (Cart)
-     */
     static async createMultiItemOrder(data: {
         items: any[]; payment_method: string; customer: any;
         card_data?: any; seller_recipient_id: string; platform_fee_percentage: number;
     }) {
         const sellerPercentage = 100 - (data.platform_fee_percentage || 0);
 
-        // Robust Address Object
         const address = {
-            line_1: 'Rua Teste, 123, Bairro Teste',
+            line_1: 'Rua Teste, 123, Centro',
             zip_code: '01001000',
             city: 'São Paulo',
             state: 'SP',
             country: 'BR',
             street: 'Rua Teste',
             number: '123',
-            neighborhood: 'Bairro Teste'
+            neighborhood: 'Centro'
         };
 
         const orderData: any = {
@@ -232,10 +228,12 @@ export class PagarmeService {
                         holder_name: card.holder_name || data.customer.name,
                         exp_month: expMonth,
                         exp_year: expYear,
-                        cvv: card.cvv
+                        cvv: card.cvv,
+                        billing_address: address
                     },
-                    billing_address: address,
+                    // Mandatory billing object for most anti-fraud configs
                     billing: {
+                        name: data.customer.name || 'Cliente',
                         address: address
                     }
                 }
