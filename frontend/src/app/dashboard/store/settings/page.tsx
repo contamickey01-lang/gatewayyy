@@ -72,30 +72,6 @@ export default function StoreSettingsPage() {
 
     if (loading) return <div style={{ textAlign: 'center', padding: 40 }}>Carregando...</div>;
 
-    const runDebug = async () => {
-        const token = localStorage.getItem('token');
-        if (!token) return toast.error('Token não encontrado no navegador');
-
-        const loadingToast = toast.loading('Executando diagnóstico...');
-        try {
-            const res = await fetch(`/api/debug/me?token=${token}`);
-            const data = await res.json();
-            console.log('DEBUG DATA:', data);
-
-            // Show a summary in a simple alert for the user to copy
-            const report = JSON.stringify({
-                user_email: data.db_user?.email,
-                user_id: data.db_user?.id,
-                store_slug: data.db_user?.store_slug,
-                store_active: data.db_user?.store_active
-            }, null, 2);
-
-            alert(`DIAGNÓSTICO CONCLUÍDO!\n\nCopie este texto e mande para o chat:\n\n${report}`);
-            toast.dismiss(loadingToast);
-        } catch (err) {
-            toast.error('Erro ao executar diagnóstico', { id: loadingToast });
-        }
-    };
 
     return (
         <div style={{ maxWidth: 800 }}>
@@ -191,21 +167,7 @@ export default function StoreSettingsPage() {
                     {saving ? 'Salvando...' : 'Salvar Configurações da Loja'}
                 </button>
 
-                <button
-                    onClick={runDebug}
-                    style={{
-                        width: '100%',
-                        background: 'none',
-                        border: '1px dashed var(--border-color)',
-                        color: 'var(--text-secondary)',
-                        padding: '10px',
-                        borderRadius: '8px',
-                        fontSize: '12px',
-                        cursor: 'pointer'
-                    }}
-                >
-                    🔍 Não está funcionando? Clique aqui para Diagnosticar
-                </button>
+
             </div>
         </div>
     );
