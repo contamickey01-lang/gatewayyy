@@ -1,15 +1,27 @@
 import { NextResponse } from 'next/server';
 import axios from 'axios';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
-
 export async function POST(req: Request) {
     try {
         const body = await req.json();
+
+        // Ensure BACKEND_URL is absolute and valid
+        let targetBackendUrl = process.env.NEXT_PUBLIC_API_URL;
+
+        // If it's relative (common if set to /api for client) or missing, use local default
+        if (!targetBackendUrl || targetBackendUrl.startsWith('/')) {
+            targetBackendUrl = 'http://localhost:3001/api';
+        }
+
         const method = body.payment_method === 'card' ? 'credit_card' : body.payment_method;
+        const targetUrl = `${targetBackendUrl.replace(/\/$/, '')}/checkout/store-checkout`;
+
+        console.log('--- Store Checkout Proxy ---');
+        console.log('Target URL:', targetUrl);
+        console.log('Payment Method:', method);
 
         // Proxy to external backend
-        const response = await axios.post(`${BACKEND_URL}/checkout/store-checkout`, {
+        const response = await axios.post(targetUrl, {
             items_cart: body.items,
             payment_method: method,
             buyer: {
