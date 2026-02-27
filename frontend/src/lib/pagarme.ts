@@ -151,7 +151,13 @@ export class PagarmeService {
         };
 
         // Add split rules at root level (matched to backend)
-        if (data.seller_recipient_id && platformRecipientId && data.platform_fee_percentage > 0) {
+        // CRITICAL FIX: Skip split if seller is the platform (Pagar.me forbids split to same recipient)
+        console.log('--- SPLIT DIAGNOSTIC ---');
+        console.log('Seller Recipient:', data.seller_recipient_id);
+        console.log('Platform Recipient:', platformRecipientId);
+
+        if (data.seller_recipient_id && platformRecipientId && data.platform_fee_percentage > 0 && data.seller_recipient_id !== platformRecipientId) {
+            console.log('Action: Applying Split Rules');
             orderData.split = [
                 {
                     amount: sellerPercentage,
@@ -166,6 +172,8 @@ export class PagarmeService {
                     options: { charge_processing_fee: false, liable: false }
                 }
             ];
+        } else {
+            console.log('Action: Skipping Split Rules (Seller is Platform or No Fee)');
         }
 
         if (data.payment_method === 'pix') {
