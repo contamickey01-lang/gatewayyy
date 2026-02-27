@@ -6,12 +6,13 @@ class StoreController {
             const { slug } = req.params;
 
             // Find user by store_slug where store_active is true
-            const { data: user, error: userError } = await supabase
+            const { data: users, error: userError } = await supabase
                 .from('users')
                 .select('id, store_name, store_description, avatar_url, store_theme, store_banner_url')
                 .eq('store_slug', slug)
-                .eq('store_active', true)
-                .single();
+                .eq('store_active', true);
+
+            const user = users && users.length > 0 ? users[0] : null;
 
             if (userError || !user) {
                 return res.status(404).json({ error: 'Loja não encontrada ou inativa.' });
