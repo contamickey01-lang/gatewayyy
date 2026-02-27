@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
             });
         }
 
-        const token = generateToken({ id: userId, role: 'seller' });
+        const token = generateToken({ userId: userId, role: 'seller' });
 
         return jsonSuccess({
             token,

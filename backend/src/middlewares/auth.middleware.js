@@ -10,11 +10,12 @@ const auth = async (req, res, next) => {
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        const { data: user, error } = await supabase
+        const { data: users, error } = await supabase
             .from('users')
             .select('*')
-            .eq('id', decoded.userId)
-            .single();
+            .eq('id', decoded.userId || decoded.id);
+
+        const user = users?.[0];
 
         if (error || !user) {
             return res.status(401).json({ error: 'Token inválido.' });

@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
         const validPassword = await comparePassword(password, user.password);
         if (!validPassword) return jsonError('Credenciais inválidas', 401);
 
-        const token = generateToken({ id: user.id, role: user.role });
+        const token = generateToken({ userId: user.id, role: user.role });
 
         return jsonSuccess({
             token,

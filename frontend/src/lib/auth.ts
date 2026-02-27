@@ -34,7 +34,7 @@ export async function getAuthUser(req: NextRequest): Promise<{ user: any; error?
         const { data: users } = await supabase
             .from('users')
             .select('*')
-            .eq('id', decoded.userId);
+            .eq('id', decoded.userId || decoded.id);
 
         const user = users?.[0];
 
