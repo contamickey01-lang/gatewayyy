@@ -12,8 +12,11 @@ export default function CartPage() {
     const router = useRouter();
     const { items, updateQuantity, removeItem, totalAmount, clearCart } = useCart();
 
+    const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [confirmEmail, setConfirmEmail] = useState('');
+    const [cpf, setCpf] = useState('');
+    const [phone, setPhone] = useState('');
     const [paymentMethod, setPaymentMethod] = useState<'pix' | 'card'>('pix');
     const [loading, setLoading] = useState(false);
 
@@ -26,7 +29,12 @@ export default function CartPage() {
 
             const payload = {
                 store_slug: params.slug,
-                email,
+                buyer: {
+                    name,
+                    email,
+                    cpf,
+                    phone
+                },
                 items: items.map(i => ({ id: i.id, quantity: i.quantity, price: i.price, name: i.name })),
                 payment_method: paymentMethod,
                 total: totalAmount
@@ -103,25 +111,56 @@ export default function CartPage() {
                                 </div>
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                            <div style={{ marginBottom: 20 }}>
+                                <label style={{ fontSize: 13, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 8 }}>Nome completo</label>
+                                <input
+                                    placeholder="Seu nome"
+                                    value={name}
+                                    onChange={e => setName(e.target.value)}
+                                    style={{ width: '100%', background: '#0a0a0c', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12, padding: '14px 16px', color: 'white', boxSizing: 'border-box' }}
+                                />
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
                                 <div>
-                                    <label style={{ fontSize: 13, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 8 }}>Informe o seu e-mail</label>
+                                    <label style={{ fontSize: 13, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 8 }}>Email</label>
                                     <input
                                         type="email"
                                         placeholder="seu@email.com"
                                         value={email}
                                         onChange={e => setEmail(e.target.value)}
-                                        style={{ width: '100%', background: '#0a0a0c', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12, padding: '14px 16px', color: 'white' }}
+                                        style={{ width: '100%', background: '#0a0a0c', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12, padding: '14px 16px', color: 'white', boxSizing: 'border-box' }}
                                     />
                                 </div>
                                 <div>
-                                    <label style={{ fontSize: 13, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 8 }}>Informe novamente o seu e-mail</label>
+                                    <label style={{ fontSize: 13, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 8 }}>Confirmar Email</label>
                                     <input
                                         type="email"
                                         placeholder="seu@email.com"
                                         value={confirmEmail}
                                         onChange={e => setConfirmEmail(e.target.value)}
-                                        style={{ width: '100%', background: '#0a0a0c', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12, padding: '14px 16px', color: 'white' }}
+                                        style={{ width: '100%', background: '#0a0a0c', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12, padding: '14px 16px', color: 'white', boxSizing: 'border-box' }}
+                                    />
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                                <div>
+                                    <label style={{ fontSize: 13, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 8 }}>CPF</label>
+                                    <input
+                                        placeholder="000.000.000-00"
+                                        value={cpf}
+                                        onChange={e => setCpf(e.target.value)}
+                                        style={{ width: '100%', background: '#0a0a0c', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12, padding: '14px 16px', color: 'white', boxSizing: 'border-box' }}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: 13, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 8 }}>Telefone</label>
+                                    <input
+                                        placeholder="(11) 99999-9999"
+                                        value={phone}
+                                        onChange={e => setPhone(e.target.value)}
+                                        style={{ width: '100%', background: '#0a0a0c', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12, padding: '14px 16px', color: 'white', boxSizing: 'border-box' }}
                                     />
                                 </div>
                             </div>

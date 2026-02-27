@@ -5,10 +5,14 @@ import { PagarmeService } from '@/lib/pagarme';
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const { items: items_cart, payment_method, email, name, cpf, phone, store_slug } = body;
+        const { items: items_cart, payment_method, buyer, store_slug } = body;
 
         if (!items_cart || items_cart.length === 0) {
             return NextResponse.json({ error: 'Carrinho vazio.' }, { status: 400 });
+        }
+
+        if (!buyer?.email || !buyer?.name || !buyer?.cpf) {
+            return NextResponse.json({ error: 'Dados do comprador incompletos (E-mail, Nome e CPF são obrigatórios).' }, { status: 400 });
         }
 
         // 1. Get the seller/store ID from the first product
@@ -25,12 +29,11 @@ export async function POST(req: Request) {
 
         const sellerId = firstProduct.user_id;
 
-        // 2. Get seller's recipient ID
+        // 2. Get seller's recipient ID (Matching standalone system: remove status filter)
         const { data: recipient } = await supabase
             .from('recipients')
-            .select('*')
+            .select('pagarme_recipient_id')
             .eq('user_id', sellerId)
-            .eq('status', 'active')
             .single();
 
         if (!recipient?.pagarme_recipient_id) {
@@ -49,7 +52,7 @@ export async function POST(req: Request) {
             fee_percentage: feePercentage
         });
 
-        // 4. Create Pagar.me Order (Mirroring STANDALONE System)
+        // 4. Create Pagar.me Order (EXACT Mirror of Standalone System)
         const totalAmountCents = items_cart.reduce((sum: number, item: any) => sum + Math.round(item.price * 100 * item.quantity), 0);
         const method = payment_method === 'card' ? 'credit_card' : payment_method;
 
@@ -59,25 +62,20 @@ export async function POST(req: Request) {
             pagarmeOrder = await PagarmeService.createOrder({
                 amount: totalAmountCents,
                 payment_method: method,
-                customer: {
-                    name: name || 'Cliente Loja',
-                    email: email,
-                    cpf: cpf || '00000000000',
-                    phone: phone || '11999999999'
-                },
+                customer: buyer,
                 seller_recipient_id: recipient.pagarme_recipient_id,
                 platform_fee_percentage: feePercentage,
                 card_data: body.card_data
             } as any);
         } catch (pagarmeErr: any) {
             const errorBody = pagarmeErr.response?.data || pagarmeErr.message;
-            console.error('Pagar.me API Error (Standalone Mirror):', JSON.stringify(errorBody, null, 2));
+            console.error('Pagar.me API Error (Final Sync):', JSON.stringify(errorBody, null, 2));
 
             return NextResponse.json({
                 error: `Erro no Pagar.me: ${errorBody.message || 'action_forbidden'}`,
                 diagnostic: {
                     seller_recipient: recipient.pagarme_recipient_id,
-                    platform_recipient: process.env.PLATFORM_RECIPIENT_ID || 'MISSING_ENV',
+                    platform_recipient: platformRecipientId || 'MISSING_ENV',
                     raw_error: errorBody
                 }
             }, { status: 400 });
@@ -85,10 +83,6 @@ export async function POST(req: Request) {
 
         const charge = pagarmeOrder.charges?.[0];
         const lastTransaction = charge?.last_transaction;
-
-        console.log('--- PAGARME STANDALONE MIRROR SUCCESS ---');
-        console.log('Order ID:', pagarmeOrder.id, '| Status:', pagarmeOrder.status);
-        console.log('Charge ID:', charge?.id, '| Status:', charge?.status);
 
         // --- ERROR DETECTION ---
         if (charge?.status === 'failed' || pagarmeOrder.status === 'failed') {
@@ -106,10 +100,10 @@ export async function POST(req: Request) {
         const orderData: any = {
             product_id: items_cart[0].id,
             seller_id: sellerId,
-            buyer_name: name || 'Cliente',
-            buyer_email: email,
-            buyer_cpf: cpf?.replace(/\D/g, '') || '00000000000',
-            buyer_phone: phone?.replace(/\D/g, '') || '11999999999',
+            buyer_name: buyer.name || 'Cliente',
+            buyer_email: buyer.email,
+            buyer_cpf: buyer.cpf?.replace(/\D/g, '') || '00000000000',
+            buyer_phone: buyer.phone?.replace(/\D/g, '') || '11999999999',
             amount: totalAmountCents,
             amount_display: (totalAmountCents / 100).toFixed(2),
             payment_method: method,
