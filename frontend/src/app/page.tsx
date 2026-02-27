@@ -15,11 +15,7 @@ export default function LandingPage() {
       }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{
-              width: 36, height: 36, borderRadius: 10,
-              background: 'var(--accent-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 18, fontWeight: 800, color: 'white'
-            }}>G</div>
+            <img src="/logo.png" alt="GouPay Logo" style={{ width: 40, height: 40, objectFit: 'contain', flexShrink: 0 }} />
             <span style={{ fontSize: 20, fontWeight: 700 }}>Gou<span className="gradient-text">Pay</span></span>
           </div>
           <nav style={{ display: 'flex', gap: 32, alignItems: 'center' }}>
@@ -141,11 +137,7 @@ export default function LandingPage() {
         textAlign: 'center', color: 'var(--text-muted)', fontSize: 13
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 16 }}>
-          <div style={{
-            width: 28, height: 28, borderRadius: 8,
-            background: 'var(--accent-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 14, fontWeight: 800, color: 'white'
-          }}>G</div>
+          <img src="/logo.png" alt="GouPay Logo" style={{ width: 32, height: 32, objectFit: 'contain', flexShrink: 0 }} />
           <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-secondary)' }}>GouPay</span>
         </div>
         © {new Date().getFullYear()} GouPay. Todos os direitos reservados.

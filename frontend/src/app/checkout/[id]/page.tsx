@@ -325,10 +325,7 @@ export default function CheckoutPage() {
             {/* Header */}
             <div style={{ maxWidth: 1000, margin: '0 auto', padding: '20px 24px 40px', textAlign: 'center' }}>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                    <div style={{
-                        width: 28, height: 28, borderRadius: 8, background: `linear-gradient(135deg, ${accent}, ${accent}99)`,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: 'white'
-                    }}>G</div>
+                    <img src="/logo.png" alt="GouPay Logo" style={{ width: 32, height: 32, objectFit: 'contain', flexShrink: 0 }} />
                     <span style={{ fontSize: 15, fontWeight: 600, color: textSecondary }}>GouPay</span>
                 </div>
             </div>
