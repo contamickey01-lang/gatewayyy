@@ -104,6 +104,7 @@ export async function POST(req: Request) {
         };
 
         // EXTREMTELY ROBUST PIX EXTRACTION
+        let diagnosticPixError = null;
         if (method === 'pix') {
             // Search in multiple possible locations
             const pixInfo = lastTransaction?.pix || lastTransaction || pagarmeOrder.payments?.[0]?.pix;
@@ -118,10 +119,9 @@ export async function POST(req: Request) {
             });
 
             if (!orderData.pix_qr_code) {
-                console.error('DIAGNOSTIC: Pix data missing. Dumping Charge object for analysis:');
-                console.error(JSON.stringify(charge, null, 2));
-                // If it's empty, maybe the split rules are causing a hold?
-                orderData.pix_error = "Pagar.me não retornou código Pix. Verifique configurações da conta.";
+                console.error('DIAGNOSTIC: Pix data missing. Dumping full Order object for deep analysis:');
+                console.error(JSON.stringify(pagarmeOrder, null, 2));
+                diagnosticPixError = "Pagar.me não retornou código Pix. Verifique se o vendedor aceita Pix.";
             }
         }
 
