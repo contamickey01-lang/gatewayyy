@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { FiHome, FiUsers, FiList, FiSettings, FiLogOut, FiShield } from 'react-icons/fi';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
     const router = useRouter();
@@ -83,7 +84,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     <h2 style={{ fontSize: 18, fontWeight: 600 }}>
                         {navItems.find(n => n.href === pathname)?.label || 'Admin'}
                     </h2>
-                    <span className="badge badge-danger" style={{ fontSize: 11 }}>ADMIN</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <ThemeToggle />
+                        <span className="badge badge-danger" style={{ fontSize: 11 }}>ADMIN</span>
+                    </div>
                 </header>
                 <div style={{ padding: 32 }}>{children}</div>
             </main>

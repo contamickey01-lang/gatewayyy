@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { FiHome, FiPackage, FiDollarSign, FiSettings, FiLogOut, FiMenu, FiX, FiPercent, FiBookOpen, FiUser, FiMessageCircle } from 'react-icons/fi';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
     const router = useRouter();
@@ -139,6 +140,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         {navItems.find(n => n.href === pathname)?.label || 'Dashboard'}
                     </h2>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, position: 'relative' }}>
+                        <ThemeToggle />
                         <span className="badge badge-success" style={{ fontSize: 11 }}>Online</span>
                         <button ref={avatarRef} onClick={() => setProfileOpen(!profileOpen)} style={{
                             width: 38, height: 38, borderRadius: '50%', background: 'var(--accent-gradient)',

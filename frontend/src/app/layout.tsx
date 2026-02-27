@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
+import { ThemeProvider } from "@/components/theme-provider";
 
 export const metadata: Metadata = {
   title: "GouPay — Plataforma de Pagamentos",
@@ -14,27 +15,34 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" suppressHydrationWarning>
       <body>
-        <Toaster
-          position="top-right"
-          toastOptions={{
-            style: {
-              background: '#16161f',
-              color: '#f0f0f5',
-              border: '1px solid #2a2a3a',
-              borderRadius: '12px',
-              fontSize: '14px',
-            },
-            success: {
-              iconTheme: { primary: '#00cec9', secondary: '#16161f' },
-            },
-            error: {
-              iconTheme: { primary: '#ff6b6b', secondary: '#16161f' },
-            },
-          }}
-        />
-        {children}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              style: {
+                background: 'var(--bg-card)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '12px',
+                fontSize: '14px',
+              },
+              success: {
+                iconTheme: { primary: 'var(--success)', secondary: 'var(--bg-card)' },
+              },
+              error: {
+                iconTheme: { primary: 'var(--danger)', secondary: 'var(--bg-card)' },
+              },
+            }}
+          />
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );

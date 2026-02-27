@@ -3,6 +3,24 @@
 @import "tailwindcss";
 
 :root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f3f4f6;
+  --bg-card: #f9fafb;
+  --bg-card-hover: #f3f4f6;
+  --border-color: #e5e7eb;
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-muted: #6b7280;
+  --accent-primary: #8e44ad;
+  --accent-secondary: #a29bfe;
+  --accent-gradient: linear-gradient(135deg, #8e44ad 0%, #9b59b6 50%, #a29bfe 100%);
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #3b82f6;
+}
+
+.dark {
   --bg-primary: #0a0a0f;
   --bg-secondary: #111118;
   --bg-card: #16161f;
@@ -33,10 +51,23 @@ body {
 }
 
 /* Scrollbar */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: var(--bg-secondary); }
-::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--accent-primary); }
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary);
+}
 
 /* Glass morphism card */
 .glass-card {
@@ -47,6 +78,7 @@ body {
   border-radius: 16px;
   transition: all 0.3s ease;
 }
+
 .glass-card:hover {
   border-color: rgba(108, 92, 231, 0.3);
   box-shadow: 0 8px 32px rgba(108, 92, 231, 0.1);
@@ -66,6 +98,7 @@ body {
   border-radius: 16px;
   overflow: hidden;
 }
+
 .gradient-border::before {
   content: '';
   position: absolute;
@@ -74,7 +107,7 @@ body {
   padding: 1px;
   background: var(--accent-gradient);
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask-composite: exclude;
   pointer-events: none;
 }
@@ -92,11 +125,16 @@ body {
   font-size: 14px;
   letter-spacing: 0.3px;
 }
+
 .btn-primary:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(108, 92, 231, 0.4);
 }
-.btn-primary:active { transform: translateY(0); }
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
 .btn-primary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -114,6 +152,7 @@ body {
   transition: all 0.3s ease;
   font-size: 14px;
 }
+
 .btn-secondary:hover {
   border-color: var(--accent-primary);
   background: var(--bg-card-hover);
@@ -130,6 +169,7 @@ body {
   transition: all 0.3s ease;
   font-size: 14px;
 }
+
 .btn-danger:hover {
   background: rgba(255, 107, 107, 0.25);
   border-color: var(--danger);
@@ -148,11 +188,15 @@ body {
   transition: all 0.3s ease;
   outline: none;
 }
+
 .input-field:focus {
   border-color: var(--accent-primary);
   box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.15);
 }
-.input-field::placeholder { color: var(--text-muted); }
+
+.input-field::placeholder {
+  color: var(--text-muted);
+}
 
 /* Status badges */
 .badge {
@@ -165,11 +209,31 @@ body {
   letter-spacing: 0.5px;
   text-transform: uppercase;
 }
-.badge-success { background: rgba(0, 206, 201, 0.15); color: var(--success); }
-.badge-warning { background: rgba(253, 203, 110, 0.15); color: var(--warning); }
-.badge-danger { background: rgba(255, 107, 107, 0.15); color: var(--danger); }
-.badge-info { background: rgba(116, 185, 255, 0.15); color: var(--info); }
-.badge-neutral { background: rgba(136, 136, 160, 0.15); color: var(--text-secondary); }
+
+.badge-success {
+  background: rgba(0, 206, 201, 0.15);
+  color: var(--success);
+}
+
+.badge-warning {
+  background: rgba(253, 203, 110, 0.15);
+  color: var(--warning);
+}
+
+.badge-danger {
+  background: rgba(255, 107, 107, 0.15);
+  color: var(--danger);
+}
+
+.badge-info {
+  background: rgba(116, 185, 255, 0.15);
+  color: var(--info);
+}
+
+.badge-neutral {
+  background: rgba(136, 136, 160, 0.15);
+  color: var(--text-secondary);
+}
 
 /* Stat card */
 .stat-card {
@@ -179,6 +243,7 @@ body {
   padding: 24px;
   transition: all 0.3s ease;
 }
+
 .stat-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
@@ -187,20 +252,52 @@ body {
 
 /* Animations */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
+
 @keyframes slideIn {
-  from { opacity: 0; transform: translateX(-20px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
+
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 20px rgba(108, 92, 231, 0.2); }
-  50% { box-shadow: 0 0 40px rgba(108, 92, 231, 0.4); }
+
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(108, 92, 231, 0.2);
+  }
+
+  50% {
+    box-shadow: 0 0 40px rgba(108, 92, 231, 0.4);
+  }
 }
-.animate-fade-in { animation: fadeIn 0.5s ease forwards; }
-.animate-slide-in { animation: slideIn 0.4s ease forwards; }
-.animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease forwards;
+}
+
+.animate-slide-in {
+  animation: slideIn 0.4s ease forwards;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
 
 /* Table */
 .data-table {
@@ -208,6 +305,7 @@ body {
   border-collapse: separate;
   border-spacing: 0;
 }
+
 .data-table th {
   padding: 14px 18px;
   text-align: left;
@@ -218,11 +316,13 @@ body {
   color: var(--text-secondary);
   border-bottom: 1px solid var(--border-color);
 }
+
 .data-table td {
   padding: 16px 18px;
   border-bottom: 1px solid rgba(42, 42, 58, 0.3);
   font-size: 14px;
 }
+
 .data-table tr:hover td {
   background: rgba(108, 92, 231, 0.03);
 }
@@ -240,10 +340,12 @@ body {
   font-size: 14px;
   transition: all 0.2s ease;
 }
+
 .sidebar-link:hover {
   background: rgba(108, 92, 231, 0.08);
   color: var(--text-primary);
 }
+
 .sidebar-link.active {
   background: rgba(108, 92, 231, 0.15);
   color: var(--accent-secondary);
