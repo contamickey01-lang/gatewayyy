@@ -52,11 +52,11 @@ export default function DashboardPage() {
         plugins: {
             legend: { display: false },
             tooltip: {
-                backgroundColor: '#16161f',
-                borderColor: '#2a2a3a',
+                backgroundColor: 'var(--bg-card)',
+                borderColor: 'var(--border-color)',
                 borderWidth: 1,
-                titleColor: '#f0f0f5',
-                bodyColor: '#8888a0',
+                titleColor: 'var(--text-primary)',
+                bodyColor: 'var(--text-secondary)',
                 padding: 12,
                 cornerRadius: 10,
                 callbacks: {

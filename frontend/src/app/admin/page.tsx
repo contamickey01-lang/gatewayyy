@@ -33,7 +33,7 @@ export default function AdminDashboard() {
 
     const chartOptions = {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false }, tooltip: { backgroundColor: '#16161f', borderColor: '#2a2a3a', borderWidth: 1, padding: 12, cornerRadius: 10 } },
+        plugins: { legend: { display: false }, tooltip: { backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)', borderWidth: 1, padding: 12, cornerRadius: 10 } },
         scales: {
             x: { grid: { color: 'rgba(42,42,58,0.3)' }, ticks: { color: '#55556a' } },
             y: { grid: { color: 'rgba(42,42,58,0.3)' }, ticks: { color: '#55556a', callback: (v: any) => `R$${v}` } }

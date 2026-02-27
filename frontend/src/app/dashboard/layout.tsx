@@ -128,7 +128,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <header style={{
                     padding: '16px 32px', borderBottom: '1px solid var(--border-color)',
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    background: 'rgba(10, 10, 15, 0.6)', backdropFilter: 'blur(10px)',
+                    background: 'var(--header-bg)', backdropFilter: 'blur(10px)',
                     position: 'sticky', top: 0, zIndex: 30
                 }}>
                     <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{

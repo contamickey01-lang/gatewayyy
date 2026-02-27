@@ -77,7 +77,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <main style={{ flex: 1, marginLeft: 260, minHeight: '100vh' }}>
                 <header style={{
                     padding: '16px 32px', borderBottom: '1px solid var(--border-color)',
-                    background: 'rgba(10,10,15,0.6)', backdropFilter: 'blur(10px)',
+                    background: 'var(--header-bg)', backdropFilter: 'blur(10px)',
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     position: 'sticky', top: 0, zIndex: 30
                 }}>
