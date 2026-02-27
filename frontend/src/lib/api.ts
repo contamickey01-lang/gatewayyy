@@ -129,6 +129,7 @@ export const storeCategoriesAPI = {
 // Store (Internal Next.js API)
 export const storeAPI = {
     getStoreBySlug: (slug: string, category?: string) => internalApi.get(`/store/${slug}`, { params: { category } }),
+    createOrder: (data: any) => internalApi.post('/store-checkout', data),
 };
 
 export default api;

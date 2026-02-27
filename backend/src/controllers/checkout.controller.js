@@ -167,6 +167,120 @@ class CheckoutController {
         });
     }
 
+    async processStoreCheckout(req, res, next) {
+        try {
+            const { items_cart, payment_method, buyer, card_data, store_slug } = req.body;
+
+            if (!items_cart || items_cart.length === 0) {
+                return res.status(400).json({ error: 'Carrinho vazio.' });
+            }
+
+            // Get the first product to find the seller/store
+            const { data: firstProduct } = await supabase
+                .from('products')
+                .select('user_id')
+                .eq('id', items_cart[0].id)
+                .single();
+
+            if (!firstProduct) {
+                return res.status(404).json({ error: 'Vendedor não encontrado.' });
+            }
+
+            const sellerId = firstProduct.user_id;
+
+            // Verify if all products belong to the same seller (optional security)
+            // For now assume they do as they come from the same store slug
+
+            // Get seller's recipient
+            const { data: recipient } = await supabase
+                .from('recipients')
+                .select('*')
+                .eq('user_id', sellerId)
+                .eq('status', 'active')
+                .single();
+
+            if (!recipient?.pagarme_recipient_id) {
+                return res.status(400).json({ error: 'O vendedor desta loja ainda não ativou os pagamentos.' });
+            }
+
+            // Get platform settings & fees
+            const { data: settings } = await supabase.from('platform_settings').select('*').single();
+            const feePercentage = settings?.fee_percentage || 15;
+            const platformRecipientId = settings?.platform_recipient_id || process.env.PLATFORM_RECIPIENT_ID;
+
+            // Create Pagarme Cart Order
+            const pagarmeOrder = await pagarmeService.createMultiItemOrder({
+                items: items_cart,
+                buyer,
+                paymentMethod: payment_method,
+                cardData: card_data,
+                sellerId,
+                platformRecipientId,
+                sellerRecipientId: recipient.pagarme_recipient_id,
+                feePercentage
+            });
+
+            const charge = pagarmeOrder.charges?.[0];
+            const totalAmountCents = pagarmeOrder.amount;
+
+            // Create order record in DB
+            // Note: Since we have multiple products, we might need an 'order_items' table 
+            // but for now we store the first product_id or a generic reference, 
+            // or just save the cart JSON in a metadata field if we don't want to change schema too much.
+            // Let's assume we use 'product_id' as the main ref but save full cart in metadata.
+            const orderData = {
+                product_id: items_cart[0].id,
+                seller_id: sellerId,
+                buyer_name: buyer.name,
+                buyer_email: buyer.email,
+                buyer_cpf: buyer.cpf,
+                buyer_phone: buyer.phone,
+                amount: totalAmountCents,
+                payment_method,
+                status: charge?.status === 'paid' ? 'paid' : 'pending',
+                pagarme_order_id: pagarmeOrder.id,
+                pagarme_charge_id: charge?.id,
+                metadata: { cart: items_cart, store_slug }
+            };
+
+            if (payment_method === 'pix' && charge?.last_transaction) {
+                orderData.pix_qr_code = charge.last_transaction.qr_code;
+                orderData.pix_qr_code_url = charge.last_transaction.qr_code_url;
+                orderData.pix_expires_at = charge.last_transaction.expires_at;
+            }
+
+            const { data: order, error: orderError } = await supabase
+                .from('orders')
+                .insert(orderData)
+                .select()
+                .single();
+
+            if (orderError) throw orderError;
+
+            // Build simplified response for frontend
+            const response = {
+                order: {
+                    id: order.id,
+                    status: order.status,
+                    amount_display: (totalAmountCents / 100).toFixed(2),
+                    payment_method: order.payment_method
+                }
+            };
+
+            if (payment_method === 'pix') {
+                response.pix = {
+                    qr_code: order.pix_qr_code,
+                    qr_code_url: order.pix_qr_code_url,
+                    expires_at: order.pix_expires_at
+                };
+            }
+
+            res.status(201).json(response);
+        } catch (error) {
+            next(error);
+        }
+    }
+
     async getOrderStatus(req, res, next) {
         try {
             const { data: order, error } = await supabase

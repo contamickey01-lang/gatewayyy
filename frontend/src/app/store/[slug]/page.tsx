@@ -3,17 +3,21 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { storeAPI } from '@/lib/api';
-import { FiShoppingCart, FiArrowRight, FiPackage, FiFilter } from 'react-icons/fi';
-import Head from 'next/head';
+import { FiShoppingCart, FiSearch, FiPackage, FiFilter, FiUser, FiZap, FiShoppingBag, FiPlus, FiArrowRight } from 'react-icons/fi';
+import { useCart } from '@/contexts/CartContext';
+import toast from 'react-hot-toast';
 
 export default function StorePage() {
     const params = useParams();
     const router = useRouter();
     const searchParams = useSearchParams();
+    const { addItem, totalItems } = useCart();
+
     const [store, setStore] = useState<any>(null);
     const [categories, setCategories] = useState<any[]>([]);
     const [products, setProducts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
     const activeCategory = searchParams.get('category') || '';
 
     useEffect(() => {
@@ -42,10 +46,25 @@ export default function StorePage() {
         }
     };
 
+    const filteredProducts = products.filter(p =>
+        p.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const handleAddToCart = (product: any) => {
+        addItem({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            price_display: product.price_display,
+            image_url: product.image_url
+        });
+        toast.success(`${product.name} adicionado!`);
+    };
+
     if (loading && !store) {
         return (
-            <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)' }}>
-                <div style={{ width: 40, height: 40, border: '3px solid var(--border-color)', borderTopColor: 'var(--accent-primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+            <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a0a0c' }}>
+                <div style={{ width: 40, height: 40, border: '3px solid rgba(255,255,255,0.1)', borderTopColor: '#6c5ce7', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
                 <style jsx>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
             </div>
         );
@@ -53,155 +72,211 @@ export default function StorePage() {
 
     if (!store) {
         return (
-            <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)', padding: 24 }}>
-                <div style={{ padding: 48, textAlign: 'center', maxWidth: 400, background: 'var(--bg-card)', borderRadius: 16, border: '1px solid var(--border-color)' }}>
-                    <FiPackage size={48} style={{ opacity: 0.3, color: 'var(--text-primary)', marginBottom: 16 }} />
-                    <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 8, color: 'var(--text-primary)' }}>Loja não encontrada</h2>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>Esta loja não existe ou está inativa.</p>
+            <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0a0a0c', padding: 24 }}>
+                <div style={{ padding: 48, textAlign: 'center', maxWidth: 400, background: '#141417', borderRadius: 24, border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <FiPackage size={48} style={{ opacity: 0.3, color: 'white', marginBottom: 16 }} />
+                    <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8, color: 'white' }}>Loja inexistente</h2>
+                    <p style={{ color: '#94a3b8', fontSize: 14 }}>Esta vitrine não foi encontrada ou está temporariamente offline.</p>
                 </div>
             </div>
         );
     }
 
-    // Apply store theme dynamically
-    const themeBg = store.theme === 'dark' ? '#0f0f13' : '#f8f9fa';
-    const themeText = store.theme === 'dark' ? '#e2e8f0' : '#1e293b';
-    const themeCard = store.theme === 'dark' ? '#1e1e24' : '#ffffff';
-    const themeBorder = store.theme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
-
     return (
-        <div style={{ minHeight: '100vh', background: themeBg, color: themeText, paddingBottom: 60, fontFamily: 'Inter, sans-serif' }}>
-            <Head>
-                <title>{store.name} - Loja Oficial</title>
-            </Head>
-
-            {/* Header/Banner */}
-            <div style={{
-                position: 'relative',
-                background: store.banner_url ? `url(${store.banner_url}) center/cover no-repeat` : 'linear-gradient(135deg, rgba(108,92,231,0.2), rgba(108,92,231,0.05))',
-                padding: '80px 24px 60px',
-                textAlign: 'center',
-                borderBottom: `1px solid ${themeBorder}`
+        <div style={{ minHeight: '100vh', background: '#0a0a0c', color: '#e2e8f0', fontFamily: 'Outfit, Inter, sans-serif' }}>
+            {/* Custom Header (Image 3 inspired) */}
+            <header style={{
+                position: 'sticky', top: 0, zIndex: 100,
+                background: 'rgba(10, 10, 12, 0.8)', backdropFilter: 'blur(12px)',
+                borderBottom: '1px solid rgba(255,255,255,0.05)', padding: '16px 24px'
             }}>
-                {store.banner_url && <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.8), rgba(0,0,0,0.2))' }} />}
-
-                <div style={{ maxWidth: 800, margin: '0 auto', position: 'relative', zIndex: 10 }}>
-                    <div style={{ width: 100, height: 100, borderRadius: '50%', background: 'var(--accent-primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40, fontWeight: 700, margin: '0 auto 20px', border: `4px solid ${themeBg}`, boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
-                        {store.name?.charAt(0) || 'L'}
+                <div style={{ maxWidth: 1400, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20 }}>
+                    <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.5px', color: 'white', cursor: 'pointer' }} onClick={() => router.push(`/store/${params.slug}`)}>
+                        {params.slug}
                     </div>
-                    <h1 style={{ fontSize: 36, fontWeight: 800, marginBottom: 12, color: store.banner_url ? 'white' : themeText, textShadow: store.banner_url ? '0 2px 8px rgba(0,0,0,0.5)' : 'none' }}>{store.name}</h1>
-                    <p style={{ fontSize: 16, color: store.banner_url ? 'rgba(255,255,255,0.9)' : (store.theme === 'dark' ? '#94a3b8' : '#64748b'), lineHeight: 1.6, maxWidth: 600, margin: '0 auto', textShadow: store.banner_url ? '0 2px 4px rgba(0,0,0,0.5)' : 'none' }}>
-                        {store.description || 'Bem-vindo à nossa loja digital! Confira nossos produtos abaixo.'}
-                    </p>
-                </div>
-            </div>
 
-            {/* Main Content Area */}
-            <div style={{ maxWidth: 1200, margin: '0 auto', padding: '40px 24px', display: 'flex', gap: 40, alignItems: 'flex-start', flexDirection: 'row', flexWrap: 'wrap' }}>
-
-                {/* Categories Sidebar */}
-                <div style={{ flex: '1 1 250px', maxWidth: 300 }}>
-                    <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <FiFilter size={18} /> Categorias
-                    </h3>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        <button
-                            onClick={() => handleCategoryClick('')}
+                    <div style={{ flex: 1, maxWidth: 600, position: 'relative' }}>
+                        <FiSearch size={18} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
+                        <input
+                            placeholder="Pesquisar produto"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
                             style={{
-                                padding: '12px 16px', background: !activeCategory ? 'var(--accent-primary)' : themeCard,
-                                color: !activeCategory ? 'white' : themeText, borderRadius: 12, border: `1px solid ${!activeCategory ? 'var(--accent-primary)' : themeBorder}`,
-                                textAlign: 'left', fontWeight: !activeCategory ? 600 : 500, cursor: 'pointer', transition: 'all 0.2s', display: 'block', width: '100%'
-                            }}>
-                            Todos os Produtos
+                                width: '100%', background: '#141417', border: '1px solid rgba(255,255,255,0.05)',
+                                borderRadius: 12, padding: '12px 16px 12px 48px', color: 'white', fontSize: 14, outline: 'none',
+                                transition: 'border-color 0.2s'
+                            }}
+                            onFocus={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.15)'}
+                            onBlur={(e) => e.target.style.borderColor = 'rgba(255,255,255,0.05)'}
+                        />
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <button
+                            onClick={() => router.push(`/store/${params.slug}/cart`)}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: 10, padding: '10px 18px',
+                                background: 'white', color: '#0a0a0c', borderRadius: 12, border: 'none',
+                                fontWeight: 700, fontSize: 13, cursor: 'pointer', transition: 'transform 0.2s'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                            onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                        >
+                            <FiShoppingBag size={18} />
+                            Carrinho
+                            <span style={{
+                                background: '#0a0a0c', color: 'white', padding: '1px 6px',
+                                borderRadius: 6, fontSize: 11, fontWeight: 800
+                            }}>{totalItems}</span>
                         </button>
 
-                        {categories.map(cat => (
-                            <button
-                                key={cat.id}
-                                onClick={() => handleCategoryClick(cat.slug)}
-                                style={{
-                                    padding: '12px 16px', background: activeCategory === cat.slug ? 'var(--accent-primary)' : themeCard,
-                                    color: activeCategory === cat.slug ? 'white' : themeText, borderRadius: 12, border: `1px solid ${activeCategory === cat.slug ? 'var(--accent-primary)' : themeBorder}`,
-                                    textAlign: 'left', fontWeight: activeCategory === cat.slug ? 600 : 500, cursor: 'pointer', transition: 'all 0.2s', display: 'block', width: '100%'
-                                }}>
-                                {cat.name}
-                            </button>
-                        ))}
+                        <button
+                            onClick={() => router.push('/login')}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: 10, padding: '10px 18px',
+                                background: '#141417', color: 'white', borderRadius: 12, border: '1px solid rgba(255,255,255,0.05)',
+                                fontWeight: 700, fontSize: 13, cursor: 'pointer'
+                            }}
+                        >
+                            <FiUser size={18} /> Entrar
+                        </button>
                     </div>
                 </div>
+            </header>
 
-                {/* Products Grid */}
-                <div style={{ flex: '3 1 600px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-                        <h2 style={{ fontSize: 22, fontWeight: 700 }}>{activeCategory ? categories.find(c => c.slug === activeCategory)?.name : 'Todos os Produtos'}</h2>
-                        <span style={{ background: themeCard, padding: '4px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600, border: `1px solid ${themeBorder}` }}>
-                            {products.length} {products.length === 1 ? 'produto' : 'produtos'}
-                        </span>
-                    </div>
-
-                    {loading ? (
-                        <div style={{ padding: 60, textAlign: 'center' }}>
-                            <div style={{ width: 30, height: 30, border: `3px solid ${themeBorder}`, borderTopColor: 'var(--accent-primary)', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto' }} />
-                        </div>
-                    ) : products.length === 0 ? (
-                        <div style={{ textAlign: 'center', padding: 60, background: themeCard, borderRadius: 16, border: `1px solid ${themeBorder}` }}>
-                            <FiShoppingCart size={40} style={{ margin: '0 auto 16px', color: '#94a3b8' }} />
-                            <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>Nenhum produto</h3>
-                            <p style={{ color: '#94a3b8' }}>Não encontramos produtos para esta categoria no momento.</p>
-                        </div>
-                    ) : (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 24 }}>
-                            {products.map(product => (
-                                <div key={product.id} style={{
-                                    background: themeCard, borderRadius: 16, border: `1px solid ${themeBorder}`, padding: 0,
-                                    overflow: 'hidden', height: '100%', display: 'flex', flexDirection: 'column',
-                                    boxShadow: store.theme === 'dark' ? '0 4px 20px rgba(0,0,0,0.3)' : '0 4px 12px rgba(0,0,0,0.03)',
-                                    transition: 'transform 0.2s, box-shadow 0.2s'
-                                }}
-                                    className="store-product-card"
-                                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = store.theme === 'dark' ? '0 12px 24px rgba(0,0,0,0.5)' : '0 12px 24px rgba(0,0,0,0.08)' }}
-                                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = store.theme === 'dark' ? '0 4px 20px rgba(0,0,0,0.3)' : '0 4px 12px rgba(0,0,0,0.03)' }}
-                                >
-                                    <div style={{ height: 180, background: store.theme === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        {product.image_url ? (
-                                            <img src={product.image_url} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                        ) : (
-                                            <FiPackage size={40} style={{ color: store.theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }} />
-                                        )}
-                                    </div>
-                                    <div style={{ padding: 24, flex: 1, display: 'flex', flexDirection: 'column' }}>
-                                        <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, flex: 1, color: themeText }}>{product.name}</h3>
-                                        {/* Optional: Add product description snippet here if needed */}
-                                        <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--accent-primary)', marginBottom: 20 }}>
-                                            R$ {product.price_display}
-                                        </div>
-                                        <button onClick={() => router.push(`/checkout/${product.id}`)} style={{
-                                            width: '100%', padding: '14px', borderRadius: 12, background: 'var(--accent-primary)',
-                                            color: 'white', fontWeight: 600, border: 'none', cursor: 'pointer',
-                                            display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center',
-                                            transition: 'background 0.2s, transform 0.1s'
-                                        }}
-                                            onMouseDown={e => e.currentTarget.style.transform = 'scale(0.98)'}
-                                            onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
-                                            onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-                                        >
-                                            Comprar Agora <FiArrowRight size={16} />
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
+            {/* Banner Section */}
+            <div style={{
+                position: 'relative',
+                height: 300,
+                background: store.banner_url ? `url(${store.banner_url}) center/cover no-repeat` : 'linear-gradient(45deg, #0a0a0c, #1a1a20)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}>
+                {store.banner_url && <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, #0a0a0c, transparent)' }} />}
+                <div style={{ position: 'relative', zIndex: 10, textAlign: 'center', padding: 24 }}>
+                    <h1 style={{ fontSize: 42, fontWeight: 900, color: 'white', marginBottom: 8, letterSpacing: '-1px' }}>{store.name}</h1>
+                    <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.6)', maxWidth: 600 }}>{store.description}</p>
                 </div>
             </div>
-            <style jsx global>{`
-                @media (max-width: 768px) {
-                    .store-product-card {
-                        grid-template-columns: 1fr !important;
-                    }
+
+            {/* Navigation & Products */}
+            <main style={{ maxWidth: 1400, margin: '0 auto', padding: '40px 24px' }}>
+                {/* Categorias Horizontal Scroll */}
+                <div style={{ display: 'flex', gap: 12, marginBottom: 40, overflowX: 'auto', paddingBottom: 10 }}>
+                    <button
+                        onClick={() => handleCategoryClick('')}
+                        style={{
+                            padding: '10px 24px', borderRadius: 100, fontSize: 14, fontWeight: 600, border: '1px solid',
+                            background: !activeCategory ? 'white' : 'transparent',
+                            color: !activeCategory ? '#0a0a0c' : '#94a3b8',
+                            borderColor: !activeCategory ? 'white' : 'rgba(255,255,255,0.05)',
+                            cursor: 'pointer', whiteSpace: 'nowrap'
+                        }}
+                    >
+                        Todos
+                    </button>
+                    {categories.map(cat => (
+                        <button
+                            key={cat.id}
+                            onClick={() => handleCategoryClick(cat.slug)}
+                            style={{
+                                padding: '10px 24px', borderRadius: 100, fontSize: 14, fontWeight: 600, border: '1px solid',
+                                background: activeCategory === cat.slug ? 'white' : 'transparent',
+                                color: activeCategory === cat.slug ? '#0a0a0c' : '#94a3b8',
+                                borderColor: activeCategory === cat.slug ? 'white' : 'rgba(255,255,255,0.05)',
+                                cursor: 'pointer', whiteSpace: 'nowrap'
+                            }}
+                        >
+                            {cat.name}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Grid (Image 1 Product Card inspired) */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 30 }}>
+                    {filteredProducts.map(product => (
+                        <div key={product.id} className="product-card" style={{
+                            background: '#141417', borderRadius: 24, overflow: 'hidden',
+                            border: '1px solid rgba(255,255,255,0.03)', position: 'relative',
+                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                        }}>
+                            {/* Bolt Badge */}
+                            <div style={{
+                                position: 'absolute', top: 215, right: 16, zIndex: 10,
+                                background: 'rgba(0, 206, 201, 0.1)', color: '#00cec9',
+                                width: 36, height: 36, borderRadius: 10,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                            }}>
+                                <FiZap size={18} />
+                            </div>
+
+                            {/* Image Container */}
+                            <div style={{ height: 200, position: 'relative', overflow: 'hidden' }}>
+                                {product.image_url ? (
+                                    <img src={product.image_url} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : (
+                                    <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #1e1e24, #0a0a0c)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <FiPackage size={48} style={{ color: 'rgba(255,255,255,0.05)' }} />
+                                    </div>
+                                )}
+                                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent, #141417)' }} />
+                            </div>
+
+                            {/* Content */}
+                            <div style={{ padding: '0 24px 24px' }}>
+                                <h3 style={{ fontSize: 18, fontWeight: 700, color: 'white', marginBottom: 16 }}>{product.name}</h3>
+
+                                <div style={{ marginBottom: 20 }}>
+                                    <div style={{ fontSize: 24, fontWeight: 800, color: 'white', letterSpacing: '-0.5px' }}>R$ {product.price_display}</div>
+                                    <div style={{ fontSize: 13, color: '#64748b', fontWeight: 500 }}>À vista no PIX</div>
+                                </div>
+
+                                <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+                                    {/* Small dots representing payment methods as per Image 1 */}
+                                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#00cec9' }} />
+                                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#ff7675' }} />
+                                </div>
+
+                                <div style={{ display: 'flex', gap: 12 }}>
+                                    <button
+                                        onClick={() => router.push(`/store/${params.slug}/cart?add=${product.id}`)}
+                                        style={{
+                                            flex: 1, background: 'white', color: '#0a0a0c', border: 'none',
+                                            padding: '12px', borderRadius: 12, fontWeight: 800, fontSize: 14,
+                                            cursor: 'pointer', transition: 'filter 0.2s'
+                                        }}
+                                        onMouseEnter={(e) => e.currentTarget.style.filter = 'brightness(0.9)'}
+                                        onMouseLeave={(e) => e.currentTarget.style.filter = 'brightness(1)'}
+                                    >
+                                        Comprar
+                                    </button>
+                                    <button
+                                        onClick={() => handleAddToCart(product)}
+                                        style={{
+                                            width: 50, background: 'white', color: '#0a0a0c', border: 'none',
+                                            borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            cursor: 'pointer', transition: 'filter 0.2s'
+                                        }}
+                                        title="Adicionar ao Carrinho"
+                                        onMouseEnter={(e) => e.currentTarget.style.filter = 'brightness(0.9)'}
+                                        onMouseLeave={(e) => e.currentTarget.style.filter = 'brightness(1)'}
+                                    >
+                                        <FiShoppingBag size={20} />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </main>
+
+            <style jsx>{`
+                .product-card:hover {
+                    border-color: rgba(255,255,255,0.1);
+                    transform: translateY(-5px);
+                    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
                 }
             `}</style>
         </div>
     );
 }
+

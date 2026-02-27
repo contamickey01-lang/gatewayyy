@@ -43,19 +43,19 @@ class PagarmeService {
     }
 
     /**
-     * Create an order with split rules
+     * Create an order with multiple items and split rules
      */
-    async createOrder({ product, buyer, paymentMethod, cardData, sellerId, platformRecipientId, sellerRecipientId, feePercentage }) {
+    async createMultiItemOrder({ items, buyer, paymentMethod, cardData, sellerId, platformRecipientId, sellerRecipientId, feePercentage }) {
         try {
             const sellerPercentage = 100 - feePercentage;
 
             const orderData = {
-                items: [{
-                    amount: product.price,
-                    description: product.name,
-                    quantity: 1,
-                    code: product.id
-                }],
+                items: items.map(item => ({
+                    amount: Math.round(item.price * 100), // Pagarme uses cents
+                    description: item.name,
+                    quantity: item.quantity,
+                    code: item.id
+                })),
                 customer: {
                     name: buyer.name,
                     email: buyer.email,
@@ -97,7 +97,7 @@ class PagarmeService {
                 orderData.payments.push({
                     payment_method: 'pix',
                     pix: {
-                        expires_in: 3600 // 1 hour
+                        expires_in: 86400 // 24 hours as per image
                     }
                 });
             } else if (paymentMethod === 'credit_card') {
@@ -126,7 +126,7 @@ class PagarmeService {
             const response = await pagarmeApi.post('/orders', orderData);
             return response.data;
         } catch (error) {
-            console.error('Pagar.me createOrder error:', error.response?.data || error.message);
+            console.error('Pagar.me createMultiItemOrder error:', error.response?.data || error.message);
             throw error;
         }
     }

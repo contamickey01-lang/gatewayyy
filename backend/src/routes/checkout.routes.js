@@ -14,6 +14,13 @@ router.post('/pay', [
     validate
 ], checkoutController.processPayment);
 
+router.post('/store-checkout', [
+    body('items_cart').isArray().withMessage('Itens do carrinho inválidos'),
+    body('payment_method').isIn(['pix', 'credit_card']).withMessage('Método de pagamento inválido'),
+    body('buyer.email').isEmail().withMessage('Email do comprador é inválido'),
+    validate
+], checkoutController.processStoreCheckout);
+
 router.get('/order/:id', checkoutController.getOrderStatus);
 
 module.exports = router;
