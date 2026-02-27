@@ -256,11 +256,18 @@ class AuthController {
 
             updates.updated_at = new Date().toISOString();
 
-            const { data, error } = await supabase
+            const { error } = await supabase
                 .from('users')
                 .update(updates)
+                .eq('id', req.user.id);
+
+            if (error) throw error;
+
+            // Fetch the updated user properly
+            const { data } = await supabase
+                .from('users')
+                .select('*')
                 .eq('id', req.user.id)
-                .select()
                 .single();
 
             if (error) throw error;
