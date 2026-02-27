@@ -67,9 +67,24 @@ export async function POST(req: Request) {
         const lastTransaction = charge?.last_transaction;
         const totalAmountCents = pagarmeOrder.amount;
 
-        console.log('--- PAGARME ORDER RESPONSE ---');
+        console.log('--- PAGARME DIAGNOSTIC ---');
         console.log('Order ID:', pagarmeOrder.id, '| Status:', pagarmeOrder.status);
-        console.log('Charge Status:', charge?.status);
+        console.log('Charge ID:', charge?.id, '| Status:', charge?.status);
+        console.log('Transaction Type:', lastTransaction?.transaction_type);
+
+        // --- ERROR DETECTION AND DIAGNOSTIC INFO ---
+        let pagarmeErrorMessage = null;
+        if (charge?.status === 'failed' || pagarmeOrder.status === 'failed') {
+            const gatewayErrors = lastTransaction?.gateway_response?.errors;
+            pagarmeErrorMessage = gatewayErrors?.map((e: any) => e.message).join('; ') || lastTransaction?.acquirer_message || 'Transação recusada pelo gateway.';
+            console.error('DIAGNOSTIC: Payment failed at Pagar.me:', pagarmeErrorMessage);
+
+            return NextResponse.json({
+                error: `Pagamento Recusado: ${pagarmeErrorMessage}`,
+                status: charge?.status || pagarmeOrder.status,
+                pagarme_id: pagarmeOrder.id
+            }, { status: 400 });
+        }
 
         // 5. Save Order to Supabase with Bulletproof Extraction
         const orderData: any = {
@@ -88,24 +103,25 @@ export async function POST(req: Request) {
             installments: body.card_data?.installments || 1
         };
 
-        // EXTREMELY ROBUST PIX EXTRACTION
+        // EXTREMTELY ROBUST PIX EXTRACTION
         if (method === 'pix') {
-            // Search in multiple possible locations (matched to backend + robust fallbacks)
+            // Search in multiple possible locations
             const pixInfo = lastTransaction?.pix || lastTransaction || pagarmeOrder.payments?.[0]?.pix;
 
             orderData.pix_qr_code = pixInfo?.qr_code || lastTransaction?.qr_code;
             orderData.pix_qr_code_url = pixInfo?.qr_code_url || lastTransaction?.qr_code_url;
             orderData.pix_expires_at = pixInfo?.expires_at || lastTransaction?.expires_at;
 
-            console.log('Pix Extraction Results:', {
+            console.log('DIAGNOSTIC: Pix Data Found:', {
                 code: !!orderData.pix_qr_code,
-                url: !!orderData.pix_qr_code_url,
-                expiry: !!orderData.pix_expires_at
+                url: !!orderData.pix_qr_code_url
             });
 
             if (!orderData.pix_qr_code) {
-                console.error('CRITICAL: Pix QR Code not found! Dumping charge object for debug.');
+                console.error('DIAGNOSTIC: Pix data missing. Dumping Charge object for analysis:');
                 console.error(JSON.stringify(charge, null, 2));
+                // If it's empty, maybe the split rules are causing a hold?
+                orderData.pix_error = "Pagar.me não retornou código Pix. Verifique configurações da conta.";
             }
         }
 

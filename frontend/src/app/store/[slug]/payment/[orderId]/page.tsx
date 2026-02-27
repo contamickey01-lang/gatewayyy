@@ -116,13 +116,23 @@ export default function PaymentPage() {
                         <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b', marginBottom: 20 }}>QR Code</div>
 
                         <div style={{
-                            width: 240, height: 240, margin: '0 auto 32px', background: 'white', padding: 12, borderRadius: 24,
-                            border: '4px solid #ff9f43', boxShadow: '0 0 30px rgba(255, 159, 67, 0.2)'
+                            width: '100%', maxWidth: 300, margin: '0 auto 32px', background: 'white', padding: 12, borderRadius: 24,
+                            border: '4px solid #ff9f43', boxShadow: '0 0 30px rgba(255, 159, 67, 0.2)',
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 240
                         }}>
                             {order.pix_qr_code ? (
                                 <QRCodeSVG value={order.pix_qr_code} size={216} bgColor="#ffffff" fgColor="#000000" />
                             ) : (
-                                <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000' }}>QR Code Indisponível</div>
+                                <div style={{ padding: 20 }}>
+                                    <div style={{ color: '#e74c3c', fontWeight: 800, fontSize: 16, marginBottom: 8 }}>QR Code Indisponível</div>
+                                    <div style={{ color: '#555', fontSize: 12, lineHeight: 1.4 }}>
+                                        Ocorreu um problema ao gerar o código com o Pagar.me.<br />
+                                        <div style={{ marginTop: 12, padding: 8, background: '#f8f9fa', borderRadius: 8, border: '1px solid #ddd', textAlign: 'left' }}>
+                                            <strong>Status:</strong> {order.status}<br />
+                                            <strong>ID:</strong> {order.pagarme_order_id || 'N/A'}
+                                        </div>
+                                    </div>
+                                </div>
                             )}
                         </div>
 

@@ -170,7 +170,7 @@ export class PagarmeService {
         if (data.payment_method === 'pix') {
             orderData.payments.push({
                 payment_method: 'pix',
-                pix: { expires_in: 86400 }
+                pix: { expires_in: 3600 }
             });
         } else if (data.payment_method === 'credit_card') {
             orderData.payments.push({
