@@ -50,7 +50,7 @@ export default function LoginPage() {
             <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: 440, padding: 40, position: 'relative' }}>
                 {/* Logo */}
                 <div style={{ textAlign: 'center', marginBottom: 36 }}>
-                    <img src="/logo.png" alt="GouPay Logo" style={{ width: 56, height: 56, margin: '0 auto 16px', objectFit: 'contain' }} />
+                    <img src="/logo.png" alt="GouPay Logo" style={{ width: 80, height: 80, margin: '0 auto 16px', objectFit: 'contain' }} />
                     <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8 }}>Bem-vindo de volta</h1>
                     <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>Entre na sua conta para continuar</p>
                 </div>

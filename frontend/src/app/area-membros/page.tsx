@@ -53,7 +53,7 @@ export default function MemberAreaPage() {
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center'
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <img src="/logo.png" alt="GouPay Logo" style={{ width: 36, height: 36, objectFit: 'contain', flexShrink: 0 }} />
+                    <img src="/logo.png" alt="GouPay Logo" style={{ width: 50, height: 50, objectFit: 'contain', flexShrink: 0 }} />
                     <span style={{ fontSize: 18, fontWeight: 700 }}>Gou<span className="gradient-text">Pay</span> <span style={{ fontSize: 12, opacity: 0.5, marginLeft: 8, fontWeight: 400 }}>Área de Membros</span></span>
                 </div>
 

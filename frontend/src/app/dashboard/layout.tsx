@@ -76,7 +76,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             }}>
                 {/* Logo */}
                 <div style={{ padding: '24px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <img src="/logo.png" alt="GouPay Logo" style={{ width: 40, height: 40, objectFit: 'contain', flexShrink: 0 }} />
+                    <img src="/logo.png" alt="GouPay Logo" style={{ width: 56, height: 56, objectFit: 'contain', flexShrink: 0 }} />
                     <span style={{ fontSize: 18, fontWeight: 700 }}>Gou<span className="gradient-text">Pay</span></span>
                 </div>
 
