@@ -101,4 +101,9 @@ export const memberAPI = {
     getLesson: (lessonId: string) => api.get(`/member/lesson/${lessonId}`),
 };
 
+// Store
+export const storeAPI = {
+    getStoreBySlug: (slug: string) => api.get(`/store/${slug}`),
+};
+
 export default api;
