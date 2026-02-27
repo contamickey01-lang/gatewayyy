@@ -86,13 +86,9 @@ export default function StorePage() {
                 {store.banner_url && <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.8), rgba(0,0,0,0.2))' }} />}
 
                 <div style={{ maxWidth: 800, margin: '0 auto', position: 'relative', zIndex: 10 }}>
-                    {store.avatar_url ? (
-                        <img src={store.avatar_url} alt={store.name} style={{ width: 100, height: 100, borderRadius: '50%', objectFit: 'cover', margin: '0 auto 20px', border: `4px solid ${themeBg}`, boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }} />
-                    ) : (
-                        <div style={{ width: 100, height: 100, borderRadius: '50%', background: 'var(--accent-primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40, fontWeight: 700, margin: '0 auto 20px', border: `4px solid ${themeBg}`, boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
-                            {store.name?.charAt(0) || 'L'}
-                        </div>
-                    )}
+                    <div style={{ width: 100, height: 100, borderRadius: '50%', background: 'var(--accent-primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40, fontWeight: 700, margin: '0 auto 20px', border: `4px solid ${themeBg}`, boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
+                        {store.name?.charAt(0) || 'L'}
+                    </div>
                     <h1 style={{ fontSize: 36, fontWeight: 800, marginBottom: 12, color: store.banner_url ? 'white' : themeText, textShadow: store.banner_url ? '0 2px 8px rgba(0,0,0,0.5)' : 'none' }}>{store.name}</h1>
                     <p style={{ fontSize: 16, color: store.banner_url ? 'rgba(255,255,255,0.9)' : (store.theme === 'dark' ? '#94a3b8' : '#64748b'), lineHeight: 1.6, maxWidth: 600, margin: '0 auto', textShadow: store.banner_url ? '0 2px 4px rgba(0,0,0,0.5)' : 'none' }}>
                         {store.description || 'Bem-vindo à nossa loja digital! Confira nossos produtos abaixo.'}

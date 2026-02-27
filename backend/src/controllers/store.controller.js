@@ -8,7 +8,7 @@ class StoreController {
             // Find user by store_slug where store_active is true
             const { data: users, error: userError } = await supabase
                 .from('users')
-                .select('id, store_name, store_description, avatar_url, store_theme, store_banner_url')
+                .select('id, store_name, store_description, store_theme, store_banner_url')
                 .eq('store_slug', slug)
                 .eq('store_active', true);
 
@@ -58,7 +58,6 @@ class StoreController {
                 store: {
                     name: user.store_name,
                     description: user.store_description,
-                    avatar_url: user.avatar_url,
                     theme: user.store_theme || 'light',
                     banner_url: user.store_banner_url
                 },

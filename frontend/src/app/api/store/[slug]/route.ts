@@ -13,7 +13,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
         // Simple eq with slug, since it should be sanitized
         const { data: users, error: userError } = await supabase
             .from('users')
-            .select('id, name, store_name, store_description, store_theme, store_banner_url, avatar_url, store_active')
+            .select('id, name, store_name, store_description, store_theme, store_banner_url, store_active')
             .ilike('store_slug', slug);
 
         if (userError) {
@@ -65,8 +65,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
                 name: user.store_name,
                 description: user.store_description,
                 theme: user.store_theme || 'light',
-                banner_url: user.store_banner_url,
-                avatar_url: user.avatar_url,
+                banner_url: user.store_banner_url
             },
             categories: categories || [],
             products: products || []
