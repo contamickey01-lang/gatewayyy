@@ -68,15 +68,17 @@ export async function POST(req: Request) {
                 card_data: body.card_data
             } as any);
         } catch (pagarmeErr: any) {
-            const errorBody = pagarmeErr.response?.data || pagarmeErr.message;
-            console.error('Pagar.me API Error (Final Sync):', JSON.stringify(errorBody, null, 2));
+            const errorBody = pagarmeErr.response?.data;
+            const errorMessage = errorBody?.message || pagarmeErr.message || 'Erro desconhecido';
+            console.error('Checkout Error (Final Sync):', JSON.stringify(errorBody || errorMessage, null, 2));
 
             return NextResponse.json({
-                error: `Erro no Pagar.me: ${errorBody.message || 'action_forbidden'}`,
+                error: `Erro no Checkout: ${errorMessage}`,
                 diagnostic: {
+                    type: errorBody ? 'PAGARME_API' : 'INTERNAL_JS',
                     seller_recipient: recipient.pagarme_recipient_id,
                     platform_recipient: platformRecipientId || 'MISSING_ENV',
-                    raw_error: errorBody
+                    raw_error: errorBody || pagarmeErr.message
                 }
             }, { status: 400 });
         }

@@ -17,6 +17,14 @@ export default function CartPage() {
     const [confirmEmail, setConfirmEmail] = useState('');
     const [cpf, setCpf] = useState('');
     const [phone, setPhone] = useState('');
+    const [cardData, setCardData] = useState({
+        number: '',
+        holder_name: '',
+        exp_month: '',
+        exp_year: '',
+        cvv: '',
+        installments: 1
+    });
     const [paymentMethod, setPaymentMethod] = useState<'pix' | 'card'>('pix');
     const [loading, setLoading] = useState(false);
 
@@ -37,7 +45,8 @@ export default function CartPage() {
                 },
                 items: items.map(i => ({ id: i.id, quantity: i.quantity, price: i.price, name: i.name })),
                 payment_method: paymentMethod,
-                total: totalAmount
+                total: totalAmount,
+                card_data: paymentMethod === 'card' ? cardData : undefined
             };
 
             const { data } = await storeAPI.createOrder(payload);
@@ -164,6 +173,66 @@ export default function CartPage() {
                                     />
                                 </div>
                             </div>
+
+                            {/* Credit Card Fields */}
+                            {paymentMethod === 'card' && (
+                                <div style={{ marginTop: 24, padding: 24, background: 'rgba(255,255,255,0.02)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)' }}>
+                                    <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 20, color: '#6c5ce7' }}>Dados do Cartão</h3>
+
+                                    <div style={{ marginBottom: 16 }}>
+                                        <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 8 }}>Número do cartão</label>
+                                        <input
+                                            placeholder="0000 0000 0000 0000"
+                                            value={cardData.number}
+                                            onChange={e => setCardData({ ...cardData, number: e.target.value })}
+                                            style={{ width: '100%', background: '#0a0a0c', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12, padding: '14px 16px', color: 'white', boxSizing: 'border-box' }}
+                                        />
+                                    </div>
+
+                                    <div style={{ marginBottom: 16 }}>
+                                        <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 8 }}>Nome no cartão</label>
+                                        <input
+                                            placeholder="VALDIR S SILVA"
+                                            value={cardData.holder_name}
+                                            onChange={e => setCardData({ ...cardData, holder_name: e.target.value.toUpperCase() })}
+                                            style={{ width: '100%', background: '#0a0a0c', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12, padding: '14px 16px', color: 'white', boxSizing: 'border-box' }}
+                                        />
+                                    </div>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                                        <div>
+                                            <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 8 }}>Mês</label>
+                                            <input
+                                                placeholder="MM"
+                                                maxLength={2}
+                                                value={cardData.exp_month}
+                                                onChange={e => setCardData({ ...cardData, exp_month: e.target.value })}
+                                                style={{ width: '100%', background: '#0a0a0c', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12, padding: '14px 16px', color: 'white', boxSizing: 'border-box' }}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 8 }}>Ano</label>
+                                            <input
+                                                placeholder="AA"
+                                                maxLength={2}
+                                                value={cardData.exp_year}
+                                                onChange={e => setCardData({ ...cardData, exp_year: e.target.value })}
+                                                style={{ width: '100%', background: '#0a0a0c', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12, padding: '14px 16px', color: 'white', boxSizing: 'border-box' }}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 8 }}>CVV</label>
+                                            <input
+                                                placeholder="123"
+                                                maxLength={4}
+                                                value={cardData.cvv}
+                                                onChange={e => setCardData({ ...cardData, cvv: e.target.value })}
+                                                style={{ width: '100%', background: '#0a0a0c', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12, padding: '14px 16px', color: 'white', boxSizing: 'border-box' }}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             <button style={{ marginTop: 32, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', background: '#0a0a0c', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 12, color: '#64748b', cursor: 'pointer' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
