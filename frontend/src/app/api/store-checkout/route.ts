@@ -107,7 +107,7 @@ export async function POST(req: Request) {
             product_id: items_cart[0].id,
             seller_id: sellerId,
             buyer_name: buyer.name || 'Cliente',
-            buyer_email: buyer.email,
+            buyer_email: buyer.email?.toLowerCase().trim(),
             buyer_cpf: buyer.cpf?.replace(/\D/g, '') || '00000000000',
             buyer_phone: buyer.phone?.replace(/\D/g, '') || '11999999999',
             amount: totalAmountCents,

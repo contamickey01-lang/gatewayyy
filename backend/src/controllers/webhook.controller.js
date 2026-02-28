@@ -38,8 +38,17 @@ class WebhookController {
             .eq('pagarme_charge_id', charge.id)
             .single();
 
-        if (!order || order.status === 'paid') return;
+        if (!order) {
+            console.log(`[WEBHOOK-DEBUG] Order not found for charge ID: ${charge.id}`);
+            return;
+        }
 
+        if (order.status === 'paid') {
+            console.log(`[WEBHOOK-DEBUG] Order ${order.id} is already marked as paid. Skipping.`);
+            return;
+        }
+
+        console.log(`[WEBHOOK-DEBUG] Marking order ${order.id} as paid...`);
         // Update order status
         await supabase
             .from('orders')
@@ -97,13 +106,18 @@ class WebhookController {
             // AUTO-ENROLLMENT for digital products
             if (product?.type === 'digital' && order.buyer_email) {
                 try {
-                    // 1. Check if user already exists (Case-insensitive)
                     const normalizedEmail = order.buyer_email.toLowerCase().trim();
-                    const { data: users } = await supabase.from('users').select('id, email');
+                    console.log(`[WEBHOOK-DEBUG] Processing auto-enrollment for: ${normalizedEmail}`);
+
+                    // 1. Check if user already exists (Case-insensitive)
+                    const { data: users, error: userFetchErr } = await supabase.from('users').select('id, email');
+                    if (userFetchErr) console.error('[WEBHOOK-DEBUG] Error fetching users:', userFetchErr.message);
+
                     let user = users?.find(u => u.email?.toLowerCase().trim() === normalizedEmail);
 
                     // 2. Create user if doesn't exist
                     if (!user) {
+                        console.log(`[WEBHOOK-DEBUG] No user found for ${normalizedEmail}. Auto-creating customer account...`);
                         const { data: newUser, error: createError } = await supabase
                             .from('users')
                             .insert({
@@ -116,11 +130,19 @@ class WebhookController {
                             .select()
                             .single();
 
-                        if (!createError) user = newUser;
+                        if (createError) {
+                            console.error('[WEBHOOK-DEBUG] User creation failed:', createError.message);
+                        } else {
+                            user = newUser;
+                            console.log(`[WEBHOOK-DEBUG] New user created: ${user.id}`);
+                        }
+                    } else {
+                        console.log(`[WEBHOOK-DEBUG] Existing user found: ${user.id}`);
                     }
 
                     // 3. Create enrollment
                     if (user) {
+                        console.log(`[WEBHOOK-DEBUG] Enrolling user ${user.id} in product ${order.product_id}...`);
                         const { error: enrollError } = await supabase
                             .from('enrollments')
                             .upsert({
@@ -131,14 +153,16 @@ class WebhookController {
                             });
 
                         if (enrollError) {
-                            console.error(`[WEBHOOK] Enrollment failed for ${order.buyer_email}:`, enrollError.message);
+                            console.error(`[WEBHOOK-DEBUG] Enrollment failed:`, enrollError.message);
                         } else {
-                            console.log(`[WEBHOOK] Auto-enrolled ${order.buyer_email} to product ${order.product_id}`);
+                            console.log(`[WEBHOOK-DEBUG] Auto-enrollment SUCCESS for ${order.buyer_email}`);
                         }
                     }
                 } catch (enrollErr) {
-                    console.error('[WEBHOOK] Auto-enrollment error:', enrollErr.message);
+                    console.error('[WEBHOOK-DEBUG] Internal auto-enrollment exception:', enrollErr.message);
                 }
+            } else {
+                console.log(`[WEBHOOK-DEBUG] Auto-enrollment skipped. Type: ${product?.type}, Email present: ${!!order.buyer_email}`);
             }
         }
 

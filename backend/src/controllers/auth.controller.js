@@ -46,33 +46,46 @@ class AuthController {
             // Find all paid orders for this email that don't have an enrollment yet
             try {
                 const normalizedEmail = email.toLowerCase().trim();
-                const { data: allPaidOrders } = await supabase
+                console.log(`[AUTH-DEBUG] Starting order search for normalized email: "${normalizedEmail}"`);
+
+                const { data: allPaidOrders, error: fetchErr } = await supabase
                     .from('orders')
-                    .select('id, product_id, buyer_email')
+                    .select('id, product_id, buyer_email, status')
                     .eq('status', 'paid');
 
-                const relevantOrders = allPaidOrders?.filter(o =>
-                    o.buyer_email?.toLowerCase().trim() === normalizedEmail
-                ) || [];
+                if (fetchErr) {
+                    console.error('[AUTH-DEBUG] Error fetching orders:', fetchErr.message);
+                } else {
+                    console.log(`[AUTH-DEBUG] Total paid orders found in DB: ${allPaidOrders?.length || 0}`);
 
-                if (relevantOrders.length > 0) {
-                    console.log(`[AUTH] Found ${relevantOrders.length} previous paid orders for ${email}. Linking...`);
-                    const enrollments = relevantOrders.map(order => ({
-                        user_id: user.id,
-                        product_id: order.product_id,
-                        order_id: order.id,
-                        status: 'active'
-                    }));
+                    const relevantOrders = allPaidOrders?.filter(o => {
+                        const orderEmail = o.buyer_email?.toLowerCase().trim();
+                        const isMatch = orderEmail === normalizedEmail;
+                        if (isMatch) console.log(`[AUTH-DEBUG] MATCH FOUND: Order ${o.id} for product ${o.product_id}`);
+                        return isMatch;
+                    }) || [];
 
-                    const { error: enrollError } = await supabase
-                        .from('enrollments')
-                        .upsert(enrollments);
+                    if (relevantOrders.length > 0) {
+                        console.log(`[AUTH-DEBUG] Linking ${relevantOrders.length} orders to user ${user.id}`);
+                        const enrollments = relevantOrders.map(order => ({
+                            user_id: user.id,
+                            product_id: order.product_id,
+                            order_id: order.id,
+                            status: 'active'
+                        }));
 
-                    if (enrollError) console.error('[AUTH] Failed to link previous orders:', enrollError.message);
-                    else console.log(`[AUTH] Successfully linked ${relevantOrders.length} orders to user ${user.id}`);
+                        const { error: enrollError } = await supabase
+                            .from('enrollments')
+                            .upsert(enrollments);
+
+                        if (enrollError) console.error('[AUTH-DEBUG] Upsert failed:', enrollError.message);
+                        else console.log('[AUTH-DEBUG] Success: All orders linked.');
+                    } else {
+                        console.log(`[AUTH-DEBUG] No paid orders found matching "${normalizedEmail}".`);
+                    }
                 }
             } catch (linkErr) {
-                console.error('[AUTH] Error during order linking:', linkErr.message);
+                console.error('[AUTH-DEBUG] Unexpected error during linking:', linkErr.message);
             }
             // ----------------------------
 

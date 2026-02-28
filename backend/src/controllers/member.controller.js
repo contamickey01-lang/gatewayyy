@@ -11,15 +11,21 @@ class MemberController {
             // Check for paid orders that are not yet enrolled for this user's email
             if (userEmail) {
                 try {
-                    const { data: orders } = await supabase
+                    console.log(`[MEMBER] Syncing for ${userEmail} (ID: ${userId})`);
+                    const { data: allPaidOrders, error: ordersErr } = await supabase
                         .from('orders')
-                        .select('id, product_id, buyer_email')
+                        .select('id, product_id, buyer_email, buyer_name')
                         .eq('status', 'paid');
 
-                    const pendingOrders = orders?.filter(o => o.buyer_email?.toLowerCase().trim() === userEmail) || [];
+                    if (ordersErr) console.error('[MEMBER] Error fetching orders:', ordersErr.message);
+
+                    const pendingOrders = allPaidOrders?.filter(o =>
+                        o.buyer_email?.toLowerCase().trim() === userEmail
+                    ) || [];
+
+                    console.log(`[MEMBER] Found ${pendingOrders.length} matching paid orders in total for email ${userEmail}`);
 
                     if (pendingOrders.length > 0) {
-                        // Check which ones are already enrolled
                         const { data: existingEnrollments } = await supabase
                             .from('enrollments')
                             .select('order_id')
@@ -29,18 +35,22 @@ class MemberController {
                         const missingOrders = pendingOrders.filter(o => !enrolledOrderIds.has(o.id));
 
                         if (missingOrders.length > 0) {
-                            console.log(`[MEMBER] Found ${missingOrders.length} missing enrollments for ${userEmail}. Syncing...`);
+                            console.log(`[MEMBER] Creating ${missingOrders.length} missing enrollments...`);
                             const newEnrollments = missingOrders.map(o => ({
                                 user_id: userId,
                                 product_id: o.product_id,
                                 order_id: o.id,
                                 status: 'active'
                             }));
-                            await supabase.from('enrollments').upsert(newEnrollments);
+                            const { error: upsertErr } = await supabase.from('enrollments').upsert(newEnrollments);
+                            if (upsertErr) console.error('[MEMBER] Upsert failed:', upsertErr.message);
+                            else console.log('[MEMBER] Sync successful.');
+                        } else {
+                            console.log('[MEMBER] All paid orders already linked.');
                         }
                     }
                 } catch (syncErr) {
-                    console.error('[MEMBER] Sync failed:', syncErr.message);
+                    console.error('[MEMBER] Sync exception:', syncErr.message);
                 }
             }
             // ------------------------
