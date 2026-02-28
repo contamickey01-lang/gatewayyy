@@ -1,4 +1,5 @@
 const { supabase } = require('../config/database');
+const pagarmeService = require('../services/pagarme.service');
 
 class MemberController {
     // List all products purchased by the logged-in user
@@ -7,35 +8,47 @@ class MemberController {
             const userId = req.user.id;
             const userEmail = req.user.email?.toLowerCase().trim();
 
-            // --- ON-THE-FLY SYNC ---
-            // Check for paid orders that are not yet enrolled for this user's email
+            // --- ULTIMATE SYNC LAYER ---
             if (userEmail) {
                 try {
-                    console.log(`[MEMBER-DEBUG] Searching for paid orders: ${userEmail}`);
-                    // Use .ilike for case-insensitive search in database (More efficient and reliable at scale)
-                    const { data: pendingOrders, error: ordersErr } = await supabase
+                    // 1. Get all orders for this email (paid or pending)
+                    const { data: allOrders, error: ordersErr } = await supabase
                         .from('orders')
-                        .select('id, product_id, buyer_email')
-                        .eq('status', 'paid')
+                        .select('id, product_id, buyer_email, status, pagarme_charge_id')
                         .ilike('buyer_email', userEmail);
 
-                    if (ordersErr) {
-                        console.error('[MEMBER-DEBUG] Search error:', ordersErr.message);
-                    } else {
-                        console.log(`[MEMBER-DEBUG] Results for ${userEmail}: ${pendingOrders?.length || 0} orders found.`);
+                    if (!ordersErr && allOrders) {
+                        const paidOrders = allOrders.filter(o => o.status === 'paid');
+                        const pendingOrders = allOrders.filter(o => o.status === 'pending' && o.pagarme_charge_id);
 
-                        if (pendingOrders && pendingOrders.length > 0) {
-                            // Check which ones are already enrolled
+                        // 2. TIER 2 FALLBACK: Check Pagar.me for pending orders
+                        for (const order of pendingOrders) {
+                            try {
+                                console.log(`[MEMBER-DEBUG] Verifying pending order ${order.id} via Pagar.me API...`);
+                                const charge = await pagarmeService.getCharge(order.pagarme_charge_id);
+
+                                if (charge && charge.status === 'paid') {
+                                    console.log(`[MEMBER-DEBUG] Order ${order.id} found PAID on Pagar.me! Updating DB...`);
+                                    await supabase.from('orders').update({ status: 'paid' }).eq('id', order.id);
+                                    paidOrders.push({ ...order, status: 'paid' });
+                                }
+                            } catch (chkErr) {
+                                console.error(`[MEMBER-DEBUG] Failed to verify charge ${order.pagarme_charge_id}:`, chkErr.message);
+                            }
+                        }
+
+                        // 3. ENROLLMENT SYNC: Link all paid orders found
+                        if (paidOrders.length > 0) {
                             const { data: existingEnrollments } = await supabase
                                 .from('enrollments')
                                 .select('order_id')
                                 .eq('user_id', userId);
 
                             const enrolledOrderIds = new Set(existingEnrollments?.map(e => e.order_id) || []);
-                            const missingOrders = pendingOrders.filter(o => !enrolledOrderIds.has(o.id));
+                            const missingOrders = paidOrders.filter(o => !enrolledOrderIds.has(o.id));
 
                             if (missingOrders.length > 0) {
-                                console.log(`[MEMBER-DEBUG] Syncing ${missingOrders.length} missing products...`);
+                                console.log(`[MEMBER-DEBUG] Enrolling ${missingOrders.length} products found via sync...`);
                                 const newEnrollments = missingOrders.map(o => ({
                                     user_id: userId,
                                     product_id: o.product_id,
@@ -47,10 +60,10 @@ class MemberController {
                         }
                     }
                 } catch (syncErr) {
-                    console.error('[MEMBER-DEBUG] Sync exception:', syncErr.message);
+                    console.error('[MEMBER-DEBUG] Ultimate Sync exception:', syncErr.message);
                 }
             }
-            // ------------------------
+            // ----------------------------
 
             // Join enrollments with products
             const { data, error } = await supabase
