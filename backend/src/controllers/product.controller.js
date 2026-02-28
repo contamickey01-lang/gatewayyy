@@ -171,6 +171,8 @@ class ProductController {
             const { email } = req.body;
             const sellerId = req.user.id;
 
+            console.log(`[MANUAL-ENROLL-DEBUG] START: Product=${productId}, Email=${email}, Seller=${sellerId}`);
+
             // 1. Verify product ownership
             const { data: product, error: productErr } = await supabase
                 .from('products')
@@ -179,24 +181,33 @@ class ProductController {
                 .eq('user_id', sellerId)
                 .single();
 
-            if (productErr || !product) {
+            if (productErr) {
+                console.error(`[MANUAL-ENROLL-DEBUG] Product check error:`, productErr.message);
+                return res.status(403).json({ error: 'Erro ao verificar produto ou permissão.' });
+            }
+            if (!product) {
+                console.error(`[MANUAL-ENROLL-DEBUG] Product NOT FOUND or not owned by seller`);
                 return res.status(403).json({ error: 'Você não tem permissão para gerenciar este produto.' });
             }
 
             // 2. Find user (Case-insensitive direct query)
             const normalizedEmail = email.toLowerCase().trim();
-            console.log(`[MANUAL-ENROLL] Searching for student: ${normalizedEmail}`);
+            console.log(`[MANUAL-ENROLL-DEBUG] Searching for student: ${normalizedEmail}`);
 
             const { data: existingUsers, error: searchErr } = await supabase
                 .from('users')
                 .select('id, email')
                 .ilike('email', normalizedEmail);
 
-            if (searchErr) throw searchErr;
+            if (searchErr) {
+                console.error(`[MANUAL-ENROLL-DEBUG] User search error:`, searchErr.message);
+                throw searchErr;
+            }
+
             let user = existingUsers && existingUsers.length > 0 ? existingUsers[0] : null;
 
             if (!user) {
-                console.log(`[MANUAL-ENROLL] Creating shadow user for: ${normalizedEmail}`);
+                console.log(`[MANUAL-ENROLL-DEBUG] Creating shadow user for: ${normalizedEmail}`);
                 const { data: newUser, error: createError } = await supabase
                     .from('users')
                     .insert({
@@ -209,11 +220,18 @@ class ProductController {
                     .select()
                     .single();
 
-                if (createError) throw createError;
+                if (createError) {
+                    console.error(`[MANUAL-ENROLL-DEBUG] User creation error:`, createError.message);
+                    throw createError;
+                }
                 user = newUser;
+                console.log(`[MANUAL-ENROLL-DEBUG] User created: ${user.id}`);
+            } else {
+                console.log(`[MANUAL-ENROLL-DEBUG] Existing user found: ${user.id}`);
             }
 
             // 3. Create or Update enrollment (Using onConflict for user_id/product_id uniqueness)
+            console.log(`[MANUAL-ENROLL-DEBUG] Upserting enrollment: User=${user.id}, Product=${productId}`);
             const { error: enrollError } = await supabase
                 .from('enrollments')
                 .upsert({
@@ -224,15 +242,19 @@ class ProductController {
                     onConflict: 'user_id, product_id'
                 });
 
-            if (enrollError) throw enrollError;
+            if (enrollError) {
+                console.error(`[MANUAL-ENROLL-DEBUG] Enrollment upsert error:`, enrollError.message);
+                throw enrollError;
+            }
 
-            console.log(`[MANUAL-ENROLL] Seller ${sellerId} granted access to ${normalizedEmail} for product ${productId}`);
+            console.log(`[MANUAL-ENROLL-DEBUG] SUCCESS: Access granted.`);
 
             res.json({
                 message: `Acesso ao produto "${product.name}" concedido com sucesso para ${normalizedEmail}!`,
                 user_id: user.id
             });
         } catch (error) {
+            console.error(`[MANUAL-ENROLL-DEBUG] CRITICAL ERROR:`, error.message);
             next(error);
         }
     }
