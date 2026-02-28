@@ -61,6 +61,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             user = newUser;
         }
 
+        if (!user) return jsonError('Erro ao criar usuário', 500);
+
         const { error: enrollError } = await supabase
             .from('enrollments')
             .upsert({
