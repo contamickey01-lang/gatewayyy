@@ -5,7 +5,9 @@ import { PagarmeService } from '@/lib/pagarme';
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const { items: items_cart, payment_method, buyer, store_slug } = body;
+        const { items: items_cart, buyer, store_slug } = body;
+        const enableCreditCard = process.env.ENABLE_CREDIT_CARD === 'true';
+        const normalizedPaymentMethod = (body.payment_method === 'card' ? 'credit_card' : body.payment_method) || 'pix';
 
         if (!items_cart || items_cart.length === 0) {
             return NextResponse.json({ error: 'Carrinho vazio.' }, { status: 400 });
@@ -54,7 +56,15 @@ export async function POST(req: Request) {
 
         // 4. Create Pagar.me Order (EXACT Mirror of Standalone System)
         const totalAmountCents = items_cart.reduce((sum: number, item: any) => sum + Math.round(item.price * 100 * item.quantity), 0);
-        const method = payment_method === 'card' ? 'credit_card' : payment_method;
+        const method = normalizedPaymentMethod;
+
+        if (method !== 'pix' && method !== 'credit_card') {
+            return NextResponse.json({ error: 'Método de pagamento inválido.' }, { status: 400 });
+        }
+
+        if (method === 'credit_card' && !enableCreditCard) {
+            return NextResponse.json({ error: 'Pagamento por cartão está desativado no momento.' }, { status: 400 });
+        }
 
         let pagarmeOrder;
         try {
@@ -65,7 +75,7 @@ export async function POST(req: Request) {
                 customer: buyer,
                 seller_recipient_id: recipient.pagarme_recipient_id,
                 platform_fee_percentage: feePercentage,
-                card_data: body.card_data
+                card_data: method === 'credit_card' ? body.card_data : undefined
             } as any);
         } catch (pagarmeErr: any) {
             const errorBody = pagarmeErr.response?.data;

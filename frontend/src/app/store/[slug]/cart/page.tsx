@@ -11,6 +11,7 @@ export default function CartPage() {
     const params = useParams();
     const router = useRouter();
     const { items, updateQuantity, removeItem, totalAmount, clearCart } = useCart();
+    const enableCreditCard = process.env.NEXT_PUBLIC_ENABLE_CREDIT_CARD === 'true';
 
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
@@ -75,6 +76,7 @@ export default function CartPage() {
         try {
             setLoading(true);
 
+            const methodToSend = enableCreditCard ? paymentMethod : 'pix';
             const payload = {
                 store_slug: params.slug,
                 buyer: {
@@ -94,9 +96,9 @@ export default function CartPage() {
                     }
                 },
                 items: items.map(i => ({ id: i.id, quantity: i.quantity, price: i.price, name: i.name })),
-                payment_method: paymentMethod,
+                payment_method: methodToSend,
                 total: totalAmount,
-                card_data: paymentMethod === 'card' ? cardData : undefined
+                card_data: enableCreditCard && methodToSend === 'card' ? cardData : undefined
             };
 
             const { data } = await storeAPI.createOrder(payload);
@@ -152,21 +154,23 @@ export default function CartPage() {
                                         </div>
                                         Pix
                                     </button>
-                                    <button
-                                        onClick={() => setPaymentMethod('card')}
-                                        style={{
-                                            flex: 1, padding: '16px', borderRadius: 12, border: '1px solid',
-                                            display: 'flex', alignItems: 'center', gap: 12, fontWeight: 700, cursor: 'pointer',
-                                            background: paymentMethod === 'card' ? 'rgba(108, 92, 231, 0.1)' : 'transparent',
-                                            borderColor: paymentMethod === 'card' ? '#6c5ce7' : 'rgba(255,255,255,0.05)',
-                                            color: paymentMethod === 'card' ? '#6c5ce7' : '#94a3b8'
-                                        }}
-                                    >
-                                        <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#6c5ce7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
-                                            <FiCreditCard size={14} />
-                                        </div>
-                                        Cartão
-                                    </button>
+                                    {enableCreditCard && (
+                                        <button
+                                            onClick={() => setPaymentMethod('card')}
+                                            style={{
+                                                flex: 1, padding: '16px', borderRadius: 12, border: '1px solid',
+                                                display: 'flex', alignItems: 'center', gap: 12, fontWeight: 700, cursor: 'pointer',
+                                                background: paymentMethod === 'card' ? 'rgba(108, 92, 231, 0.1)' : 'transparent',
+                                                borderColor: paymentMethod === 'card' ? '#6c5ce7' : 'rgba(255,255,255,0.05)',
+                                                color: paymentMethod === 'card' ? '#6c5ce7' : '#94a3b8'
+                                            }}
+                                        >
+                                            <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#6c5ce7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+                                                <FiCreditCard size={14} />
+                                            </div>
+                                            Cartão
+                                        </button>
+                                    )}
                                 </div>
                             </div>
 
@@ -293,7 +297,7 @@ export default function CartPage() {
                             </div>
 
                             {/* Credit Card Fields */}
-                            {paymentMethod === 'card' && (
+                            {enableCreditCard && paymentMethod === 'card' && (
                                 <div style={{ marginTop: 24, padding: 24, background: 'rgba(255,255,255,0.02)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)' }}>
                                     <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 20, color: '#6c5ce7' }}>Dados do Cartão</h3>
 

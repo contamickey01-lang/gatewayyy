@@ -9,9 +9,19 @@ import { v4 as uuidv4 } from 'uuid';
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-        const { product_id, payment_method, buyer, card_data } = body;
+        const { product_id, buyer, card_data } = body;
+        const enableCreditCard = process.env.ENABLE_CREDIT_CARD === 'true';
+        const normalizedPaymentMethod = (body.payment_method === 'card' ? 'credit_card' : body.payment_method) || 'pix';
 
-        if (!product_id || !payment_method || !buyer?.name || !buyer?.email || !buyer?.cpf) {
+        if (normalizedPaymentMethod !== 'pix' && normalizedPaymentMethod !== 'credit_card') {
+            return jsonError('Método de pagamento inválido');
+        }
+
+        if (normalizedPaymentMethod === 'credit_card' && !enableCreditCard) {
+            return jsonError('Pagamento por cartão está desativado no momento');
+        }
+
+        if (!product_id || !buyer?.name || !buyer?.email || !buyer?.cpf) {
             return jsonError('Dados incompletos');
         }
 
@@ -40,9 +50,9 @@ export async function POST(req: NextRequest) {
 
         const order = await PagarmeService.createOrder({
             amount: product.price,
-            payment_method,
+            payment_method: normalizedPaymentMethod,
             customer: buyer,
-            card_data,
+            card_data: normalizedPaymentMethod === 'credit_card' ? card_data : undefined,
             seller_recipient_id: recipient.pagarme_recipient_id,
             platform_fee_percentage: feePercentage
         });
@@ -55,7 +65,7 @@ export async function POST(req: NextRequest) {
             id: orderId, seller_id: product.user_id, product_id: product.id,
             buyer_name: buyer.name, buyer_email: buyer.email, buyer_cpf: buyer.cpf,
             amount: product.price, amount_display: product.price_display,
-            payment_method, status: charge?.status === 'paid' ? 'paid' : 'pending',
+            payment_method: normalizedPaymentMethod, status: charge?.status === 'paid' ? 'paid' : 'pending',
             pagarme_order_id: order.id, pagarme_charge_id: charge?.id
         });
 
@@ -152,7 +162,7 @@ export async function POST(req: NextRequest) {
             };
         }
 
-        if (payment_method === 'pix') {
+        if (normalizedPaymentMethod === 'pix') {
             const lastTransaction = charge?.last_transaction;
             const pixInfo = lastTransaction?.pix || lastTransaction || order.payments?.[0]?.pix;
 

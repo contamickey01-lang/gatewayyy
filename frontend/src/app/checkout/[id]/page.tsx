@@ -22,6 +22,7 @@ const DEFAULT_SETTINGS = {
 export default function CheckoutPage() {
     const params = useParams();
     const router = useRouter();
+    const enableCreditCard = process.env.NEXT_PUBLIC_ENABLE_CREDIT_CARD === 'true';
     const [product, setProduct] = useState<any>(null);
     const [settings, setSettings] = useState(DEFAULT_SETTINGS);
     const [loading, setLoading] = useState(true);
@@ -132,8 +133,9 @@ export default function CheckoutPage() {
         e.preventDefault();
         setProcessing(true);
         try {
+            const methodToSend = enableCreditCard ? paymentMethod : 'pix';
             const payload: any = {
-                product_id: params.id, payment_method: paymentMethod,
+                product_id: params.id, payment_method: methodToSend,
                 buyer: {
                     name: form.name, email: form.email, cpf: form.cpf, phone: form.phone,
                     address: {
@@ -148,7 +150,7 @@ export default function CheckoutPage() {
                     }
                 }
             };
-            if (paymentMethod === 'credit_card') {
+            if (methodToSend === 'credit_card') {
                 payload.card_data = {
                     number: form.card_number.replace(/\s/g, ''), holder_name: form.card_holder,
                     exp_month: parseInt(form.card_exp_month), exp_year: parseInt(form.card_exp_year),
@@ -160,7 +162,7 @@ export default function CheckoutPage() {
             if (data.order?.status === 'paid') {
                 toast.success('Pagamento aprovado! 🎉');
                 if (data.auth) autoLoginAndRedirect(data.auth);
-            } else if (paymentMethod === 'pix') {
+            } else if (methodToSend === 'pix') {
                 if (data.pix) {
                     toast.success('QR Code gerado!');
                     startPixPolling(data.order.id);
@@ -470,28 +472,36 @@ export default function CheckoutPage() {
                         {/* Payment method */}
                         <div style={{ marginBottom: 20 }}>
                             <label style={{ fontSize: 13, fontWeight: 500, color: textSecondary, marginBottom: 10, display: 'block' }}>Forma de pagamento</label>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                                {[
-                                    { key: 'pix', label: 'Pix', icon: <FiSmartphone size={18} /> },
-                                    { key: 'credit_card', label: 'Cartão de Crédito', icon: <FiCreditCard size={18} /> }
-                                ].map(m => (
-                                    <button key={m.key} type="button" onClick={() => setPaymentMethod(m.key)}
+                            <div style={{ display: 'grid', gridTemplateColumns: enableCreditCard ? '1fr 1fr' : '1fr', gap: 10 }}>
+                                <button type="button" onClick={() => setPaymentMethod('pix')}
+                                    style={{
+                                        padding: '14px', borderRadius: 12, cursor: 'pointer', display: 'flex',
+                                        alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 13, fontWeight: 500,
+                                        transition: 'all 0.2s ease', fontFamily: 'inherit',
+                                        background: paymentMethod === 'pix' ? `${accent}1a` : (isLight ? '#f5f5f5' : 'var(--bg-secondary)'),
+                                        border: `1px solid ${paymentMethod === 'pix' ? accent : borderColor}`,
+                                        color: paymentMethod === 'pix' ? accent : textSecondary
+                                    }}>
+                                    <FiSmartphone size={18} /> Pix
+                                </button>
+                                {enableCreditCard && (
+                                    <button type="button" onClick={() => setPaymentMethod('credit_card')}
                                         style={{
                                             padding: '14px', borderRadius: 12, cursor: 'pointer', display: 'flex',
                                             alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 13, fontWeight: 500,
                                             transition: 'all 0.2s ease', fontFamily: 'inherit',
-                                            background: paymentMethod === m.key ? `${accent}1a` : (isLight ? '#f5f5f5' : 'var(--bg-secondary)'),
-                                            border: `1px solid ${paymentMethod === m.key ? accent : borderColor}`,
-                                            color: paymentMethod === m.key ? accent : textSecondary
+                                            background: paymentMethod === 'credit_card' ? `${accent}1a` : (isLight ? '#f5f5f5' : 'var(--bg-secondary)'),
+                                            border: `1px solid ${paymentMethod === 'credit_card' ? accent : borderColor}`,
+                                            color: paymentMethod === 'credit_card' ? accent : textSecondary
                                         }}>
-                                        {m.icon} {m.label}
+                                        <FiCreditCard size={18} /> Cartão de Crédito
                                     </button>
-                                ))}
+                                )}
                             </div>
                         </div>
 
                         {/* Credit Card Fields */}
-                        {paymentMethod === 'credit_card' && (
+                        {enableCreditCard && paymentMethod === 'credit_card' && (
                             <div style={{ marginBottom: 20 }}>
                                 <div style={{ marginBottom: 12 }}>
                                     <label style={{ fontSize: 13, fontWeight: 500, color: textSecondary, marginBottom: 6, display: 'block' }}>Número do cartão</label>
