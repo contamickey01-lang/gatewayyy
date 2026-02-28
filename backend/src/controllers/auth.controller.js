@@ -40,6 +40,38 @@ class AuthController {
 
             if (error) throw error;
 
+            console.log(`[AUTH] User created: ${user.id} (${user.email})`);
+
+            // --- LINK EXISTING ORDERS ---
+            // Find all paid orders for this email that don't have an enrollment yet
+            try {
+                const { data: paidOrders } = await supabase
+                    .from('orders')
+                    .select('id, product_id')
+                    .eq('buyer_email', email)
+                    .eq('status', 'paid');
+
+                if (paidOrders && paidOrders.length > 0) {
+                    console.log(`[AUTH] Found ${paidOrders.length} previous paid orders for ${email}. Linking...`);
+                    const enrollments = paidOrders.map(order => ({
+                        user_id: user.id,
+                        product_id: order.product_id,
+                        order_id: order.id,
+                        status: 'active'
+                    }));
+
+                    const { error: enrollError } = await supabase
+                        .from('enrollments')
+                        .upsert(enrollments);
+
+                    if (enrollError) console.error('[AUTH] Failed to link previous orders:', enrollError.message);
+                    else console.log(`[AUTH] Successfully linked ${paidOrders.length} orders to user ${user.id}`);
+                }
+            } catch (linkErr) {
+                console.error('[AUTH] Error during order linking:', linkErr.message);
+            }
+            // ----------------------------
+
             // Create Pagar.me recipient
             try {
                 const recipient = await pagarmeService.createRecipient(user);

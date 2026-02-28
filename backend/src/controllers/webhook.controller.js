@@ -123,7 +123,7 @@ class WebhookController {
 
                     // 3. Create enrollment
                     if (user) {
-                        await supabase
+                        const { error: enrollError } = await supabase
                             .from('enrollments')
                             .upsert({
                                 user_id: user.id,
@@ -131,10 +131,15 @@ class WebhookController {
                                 order_id: order.id,
                                 status: 'active'
                             });
-                        console.log(`Auto-enrolled ${order.buyer_email} to product ${order.product_id}`);
+
+                        if (enrollError) {
+                            console.error(`[WEBHOOK] Enrollment failed for ${order.buyer_email}:`, enrollError.message);
+                        } else {
+                            console.log(`[WEBHOOK] Auto-enrolled ${order.buyer_email} to product ${order.product_id}`);
+                        }
                     }
                 } catch (enrollErr) {
-                    console.error('Auto-enrollment failed:', enrollErr.message);
+                    console.error('[WEBHOOK] Auto-enrollment error:', enrollErr.message);
                 }
             }
         }
