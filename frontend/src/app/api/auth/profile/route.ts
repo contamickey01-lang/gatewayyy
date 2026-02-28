@@ -152,9 +152,24 @@ export async function PUT(req: NextRequest) {
                 const isTestRecipient = existingRecipient?.pagarme_recipient_id?.startsWith('re_test_');
 
                 if (existingRecipient?.pagarme_recipient_id && !documentChanged && !isTestRecipient) {
-                    // Update existing
-                    await PagarmeService.updateRecipient(existingRecipient.pagarme_recipient_id, recipientData);
-                    await supabase.from('recipients').update({ status: 'active' }).eq('user_id', auth.user.id);
+                    try {
+                        // Attempt to update existing
+                        await PagarmeService.updateRecipient(existingRecipient.pagarme_recipient_id, recipientData);
+                        await supabase.from('recipients').update({ status: 'active' }).eq('user_id', auth.user.id);
+                    } catch (updateErr: any) {
+                        const errorMsg = updateErr.response?.data?.message || "";
+                        // If update is forbidden (due to status), we try to create a NEW one
+                        if (updateErr.response?.status === 403 || errorMsg.includes("valid status")) {
+                            console.log(`[AUTH API] Update forbidden for ${existingRecipient.pagarme_recipient_id}, attempting new creation...`);
+                            const pRecipient = await PagarmeService.createRecipient(recipientData);
+                            await supabase
+                                .from('recipients')
+                                .update({ pagarme_recipient_id: pRecipient.id, status: 'active' })
+                                .eq('user_id', auth.user.id);
+                        } else {
+                            throw updateErr; // Re-throw other errors to be caught by the outer catch
+                        }
+                    }
                 } else {
                     // Create new
                     const pRecipient = await PagarmeService.createRecipient(recipientData);
