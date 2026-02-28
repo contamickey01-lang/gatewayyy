@@ -97,12 +97,10 @@ class WebhookController {
             // AUTO-ENROLLMENT for digital products
             if (product?.type === 'digital' && order.buyer_email) {
                 try {
-                    // 1. Check if user already exists
-                    let { data: user } = await supabase
-                        .from('users')
-                        .select('id')
-                        .eq('email', order.buyer_email)
-                        .single();
+                    // 1. Check if user already exists (Case-insensitive)
+                    const normalizedEmail = order.buyer_email.toLowerCase().trim();
+                    const { data: users } = await supabase.from('users').select('id, email');
+                    let user = users?.find(u => u.email?.toLowerCase().trim() === normalizedEmail);
 
                     // 2. Create user if doesn't exist
                     if (!user) {
@@ -111,7 +109,7 @@ class WebhookController {
                             .insert({
                                 name: order.buyer_name || 'Estudante',
                                 email: order.buyer_email,
-                                password_hash: 'INITIAL_PAYMENT_PENDING_SET', // Needs password reset/init
+                                password_hash: 'INITIAL_PAYMENT_PENDING_SET',
                                 role: 'customer',
                                 status: 'active'
                             })

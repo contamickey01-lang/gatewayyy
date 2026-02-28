@@ -4,6 +4,47 @@ class MemberController {
     // List all products purchased by the logged-in user
     async listMyProducts(req, res, next) {
         try {
+            const userId = req.user.id;
+            const userEmail = req.user.email?.toLowerCase().trim();
+
+            // --- ON-THE-FLY SYNC ---
+            // Check for paid orders that are not yet enrolled for this user's email
+            if (userEmail) {
+                try {
+                    const { data: orders } = await supabase
+                        .from('orders')
+                        .select('id, product_id, buyer_email')
+                        .eq('status', 'paid');
+
+                    const pendingOrders = orders?.filter(o => o.buyer_email?.toLowerCase().trim() === userEmail) || [];
+
+                    if (pendingOrders.length > 0) {
+                        // Check which ones are already enrolled
+                        const { data: existingEnrollments } = await supabase
+                            .from('enrollments')
+                            .select('order_id')
+                            .eq('user_id', userId);
+
+                        const enrolledOrderIds = new Set(existingEnrollments?.map(e => e.order_id) || []);
+                        const missingOrders = pendingOrders.filter(o => !enrolledOrderIds.has(o.id));
+
+                        if (missingOrders.length > 0) {
+                            console.log(`[MEMBER] Found ${missingOrders.length} missing enrollments for ${userEmail}. Syncing...`);
+                            const newEnrollments = missingOrders.map(o => ({
+                                user_id: userId,
+                                product_id: o.product_id,
+                                order_id: o.id,
+                                status: 'active'
+                            }));
+                            await supabase.from('enrollments').upsert(newEnrollments);
+                        }
+                    }
+                } catch (syncErr) {
+                    console.error('[MEMBER] Sync failed:', syncErr.message);
+                }
+            }
+            // ------------------------
+
             // Join enrollments with products
             const { data, error } = await supabase
                 .from('enrollments')
@@ -18,7 +59,7 @@ class MemberController {
                         image_url
                     )
                 `)
-                .eq('user_id', req.user.id)
+                .eq('user_id', userId)
                 .eq('status', 'active');
 
             if (error) throw error;

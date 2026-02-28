@@ -45,15 +45,19 @@ class AuthController {
             // --- LINK EXISTING ORDERS ---
             // Find all paid orders for this email that don't have an enrollment yet
             try {
-                const { data: paidOrders } = await supabase
+                const normalizedEmail = email.toLowerCase().trim();
+                const { data: allPaidOrders } = await supabase
                     .from('orders')
-                    .select('id, product_id')
-                    .eq('buyer_email', email)
+                    .select('id, product_id, buyer_email')
                     .eq('status', 'paid');
 
-                if (paidOrders && paidOrders.length > 0) {
-                    console.log(`[AUTH] Found ${paidOrders.length} previous paid orders for ${email}. Linking...`);
-                    const enrollments = paidOrders.map(order => ({
+                const relevantOrders = allPaidOrders?.filter(o =>
+                    o.buyer_email?.toLowerCase().trim() === normalizedEmail
+                ) || [];
+
+                if (relevantOrders.length > 0) {
+                    console.log(`[AUTH] Found ${relevantOrders.length} previous paid orders for ${email}. Linking...`);
+                    const enrollments = relevantOrders.map(order => ({
                         user_id: user.id,
                         product_id: order.product_id,
                         order_id: order.id,
@@ -65,7 +69,7 @@ class AuthController {
                         .upsert(enrollments);
 
                     if (enrollError) console.error('[AUTH] Failed to link previous orders:', enrollError.message);
-                    else console.log(`[AUTH] Successfully linked ${paidOrders.length} orders to user ${user.id}`);
+                    else console.log(`[AUTH] Successfully linked ${relevantOrders.length} orders to user ${user.id}`);
                 }
             } catch (linkErr) {
                 console.error('[AUTH] Error during order linking:', linkErr.message);
