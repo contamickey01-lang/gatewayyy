@@ -86,7 +86,10 @@ export async function POST(req: NextRequest) {
 
             // AUTO-ENROLLMENT: Find or create buyer user and enroll them
             const { data: existingUser } = await supabase
-                .from('users').select('id, name, email, role').eq('email', buyer.email.toLowerCase()).single();
+                .from('users')
+                .select('id, name, email, role')
+                .ilike('email', buyer.email.toLowerCase().trim())
+                .single();
 
             if (existingUser) {
                 buyerUser = existingUser;
@@ -95,13 +98,32 @@ export async function POST(req: NextRequest) {
                 const newUserId = uuidv4();
                 const tempPassword = uuidv4().substring(0, 12);
                 const hashedPw = await hashPassword(tempPassword);
-                const { data: newUser, error: createErr } = await supabase.from('users').insert({
+
+                const baseUserData: any = {
                     id: newUserId,
-                    email: buyer.email.toLowerCase(),
+                    email: buyer.email.toLowerCase().trim(),
                     name: buyer.name,
                     role: 'customer',
-                    password_hash: hashedPw
-                }).select('id, name, email, role').single();
+                    status: 'active'
+                };
+
+                let newUser: any = null;
+                let createErr: any = null;
+
+                ({ data: newUser, error: createErr } = await supabase
+                    .from('users')
+                    .insert({ ...baseUserData, password_hash: hashedPw })
+                    .select('id, name, email, role')
+                    .single());
+
+                if (createErr && /password_hash/i.test(createErr.message || '')) {
+                    ({ data: newUser, error: createErr } = await supabase
+                        .from('users')
+                        .insert({ ...baseUserData, password: hashedPw })
+                        .select('id, name, email, role')
+                        .single());
+                }
+
                 if (!createErr && newUser) buyerUser = newUser;
             }
 

@@ -33,17 +33,29 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         let user = existingUsers && existingUsers.length > 0 ? existingUsers[0] : null;
 
         if (!user) {
-            const { data: newUser, error: createError } = await supabase
+            const baseUserData: any = {
+                name: 'Estudante (Manual)',
+                email: normalizedEmail,
+                role: 'customer',
+                status: 'active'
+            };
+
+            let newUser: any = null;
+            let createError: any = null;
+
+            ({ data: newUser, error: createError } = await supabase
                 .from('users')
-                .insert({
-                    name: 'Estudante (Manual)',
-                    email: normalizedEmail,
-                    password_hash: 'MANUAL_ENROLLMENT_PENDING_SET',
-                    role: 'customer',
-                    status: 'active'
-                })
+                .insert({ ...baseUserData, password_hash: 'MANUAL_ENROLLMENT_PENDING_SET' })
                 .select('id, email')
-                .single();
+                .single());
+
+            if (createError && /password_hash/i.test(createError.message || '')) {
+                ({ data: newUser, error: createError } = await supabase
+                    .from('users')
+                    .insert({ ...baseUserData, password: 'MANUAL_ENROLLMENT_PENDING_SET' })
+                    .select('id, email')
+                    .single());
+            }
 
             if (createError || !newUser) return jsonError('Erro ao criar usuário', 500);
             user = newUser;
@@ -69,4 +81,3 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         return jsonError('Erro interno', 500);
     }
 }
-

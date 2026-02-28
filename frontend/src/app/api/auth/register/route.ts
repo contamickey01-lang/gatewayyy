@@ -34,11 +34,32 @@ export async function POST(req: NextRequest) {
         // Defer Pagar.me recipient creation until profile update with real bank data
         const pagarmeRecipientId = null;
 
-        // Create user
-        const { data: user, error } = await supabase.from('users').insert({
-            id: userId, name, email: normalizedEmail, password_hash: hashedPassword,
-            cpf_cnpj, phone, role: 'seller', status: 'active'
-        }).select().single();
+        const baseUserData: any = {
+            id: userId,
+            name,
+            email: normalizedEmail,
+            cpf_cnpj,
+            phone,
+            role: 'seller',
+            status: 'active'
+        };
+
+        let user: any = null;
+        let error: any = null;
+
+        ({ data: user, error } = await supabase
+            .from('users')
+            .insert({ ...baseUserData, password_hash: hashedPassword })
+            .select()
+            .single());
+
+        if (error && /password_hash/i.test(error.message || '')) {
+            ({ data: user, error } = await supabase
+                .from('users')
+                .insert({ ...baseUserData, password: hashedPassword })
+                .select()
+                .single());
+        }
 
         if (error) {
             console.error('Supabase insert error:', error);

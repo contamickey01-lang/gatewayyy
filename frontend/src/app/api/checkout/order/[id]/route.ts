@@ -31,7 +31,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         // Find or create buyer user
         let buyerUser: any = null;
         const { data: existingUser } = await supabase
-            .from('users').select('id, name, email, role').eq('email', order.buyer_email.toLowerCase()).single();
+            .from('users')
+            .select('id, name, email, role')
+            .ilike('email', order.buyer_email.toLowerCase().trim())
+            .single();
 
         if (existingUser) {
             buyerUser = existingUser;
@@ -39,13 +42,31 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
             const newUserId = uuidv4();
             const tempPassword = uuidv4().substring(0, 12);
             const hashedPw = await hashPassword(tempPassword);
-            const { data: newUser, error: createErr } = await supabase.from('users').insert({
+            const baseUserData: any = {
                 id: newUserId,
-                email: order.buyer_email.toLowerCase(),
+                email: order.buyer_email.toLowerCase().trim(),
                 name: order.buyer_name || 'Estudante',
                 role: 'customer',
-                password_hash: hashedPw
-            }).select('id, name, email, role').single();
+                status: 'active'
+            };
+
+            let newUser: any = null;
+            let createErr: any = null;
+
+            ({ data: newUser, error: createErr } = await supabase
+                .from('users')
+                .insert({ ...baseUserData, password_hash: hashedPw })
+                .select('id, name, email, role')
+                .single());
+
+            if (createErr && /password_hash/i.test(createErr.message || '')) {
+                ({ data: newUser, error: createErr } = await supabase
+                    .from('users')
+                    .insert({ ...baseUserData, password: hashedPw })
+                    .select('id, name, email, role')
+                    .single());
+            }
+
             if (!createErr && newUser) buyerUser = newUser;
         }
 
