@@ -100,7 +100,7 @@ export class PagarmeService {
                 amount: sellerPercentage,
                 recipient_id: sellId,
                 type: 'percentage',
-                options: { charge_processing_fee: true, liable: true }
+                options: { charge_processing_fee: true, liable: true, charge_remainder_fee: true }
             },
             {
                 amount: fee,
@@ -214,7 +214,7 @@ export class PagarmeService {
                 amount: sellerPercentage,
                 recipient_id: sellId,
                 type: 'percentage',
-                options: { charge_processing_fee: true, liable: true }
+                options: { charge_processing_fee: true, liable: true, charge_remainder_fee: true }
             },
             {
                 amount: fee,
