@@ -134,12 +134,22 @@ export async function POST(req: NextRequest) {
             const lastTransaction = charge?.last_transaction;
             const pixInfo = lastTransaction?.pix || lastTransaction || order.payments?.[0]?.pix;
 
+            console.log('[PAY API] Pix Extraction Debug:', {
+                hasCharge: !!charge,
+                hasLastTransaction: !!lastTransaction,
+                hasPixInfo: !!pixInfo,
+                qrCode: !!pixInfo?.qr_code,
+                qrCodeUrl: !!pixInfo?.qr_code_url
+            });
+
             if (pixInfo?.qr_code || pixInfo?.qr_code_url) {
                 response.pix = {
                     qr_code: pixInfo.qr_code,
                     qr_code_url: pixInfo.qr_code_url,
                     expires_at: pixInfo.expires_at
                 };
+            } else {
+                console.error('[PAY API] Pix data NOT found. Full Pagar.me Order:', JSON.stringify(order, null, 2));
             }
         }
 

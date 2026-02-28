@@ -161,8 +161,12 @@ export default function CheckoutPage() {
                 toast.success('Pagamento aprovado! 🎉');
                 if (data.auth) autoLoginAndRedirect(data.auth);
             } else if (paymentMethod === 'pix') {
-                toast.success('QR Code gerado!');
-                startPixPolling(data.order.id);
+                if (data.pix) {
+                    toast.success('QR Code gerado!');
+                    startPixPolling(data.order.id);
+                } else {
+                    toast.error('O pedido foi gerado, mas o Pagar.me não retornou o QR Code.');
+                }
             }
         } catch (err: any) {
             toast.error(err.response?.data?.error || 'Erro ao processar pagamento');
