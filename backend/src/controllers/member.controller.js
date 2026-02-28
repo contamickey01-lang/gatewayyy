@@ -11,46 +11,43 @@ class MemberController {
             // Check for paid orders that are not yet enrolled for this user's email
             if (userEmail) {
                 try {
-                    console.log(`[MEMBER] Syncing for ${userEmail} (ID: ${userId})`);
-                    const { data: allPaidOrders, error: ordersErr } = await supabase
+                    console.log(`[MEMBER-DEBUG] Searching for paid orders: ${userEmail}`);
+                    // Use .ilike for case-insensitive search in database (More efficient and reliable at scale)
+                    const { data: pendingOrders, error: ordersErr } = await supabase
                         .from('orders')
-                        .select('id, product_id, buyer_email, buyer_name')
-                        .eq('status', 'paid');
+                        .select('id, product_id, buyer_email')
+                        .eq('status', 'paid')
+                        .ilike('buyer_email', userEmail);
 
-                    if (ordersErr) console.error('[MEMBER] Error fetching orders:', ordersErr.message);
+                    if (ordersErr) {
+                        console.error('[MEMBER-DEBUG] Search error:', ordersErr.message);
+                    } else {
+                        console.log(`[MEMBER-DEBUG] Results for ${userEmail}: ${pendingOrders?.length || 0} orders found.`);
 
-                    const pendingOrders = allPaidOrders?.filter(o =>
-                        o.buyer_email?.toLowerCase().trim() === userEmail
-                    ) || [];
+                        if (pendingOrders && pendingOrders.length > 0) {
+                            // Check which ones are already enrolled
+                            const { data: existingEnrollments } = await supabase
+                                .from('enrollments')
+                                .select('order_id')
+                                .eq('user_id', userId);
 
-                    console.log(`[MEMBER] Found ${pendingOrders.length} matching paid orders in total for email ${userEmail}`);
+                            const enrolledOrderIds = new Set(existingEnrollments?.map(e => e.order_id) || []);
+                            const missingOrders = pendingOrders.filter(o => !enrolledOrderIds.has(o.id));
 
-                    if (pendingOrders.length > 0) {
-                        const { data: existingEnrollments } = await supabase
-                            .from('enrollments')
-                            .select('order_id')
-                            .eq('user_id', userId);
-
-                        const enrolledOrderIds = new Set(existingEnrollments?.map(e => e.order_id) || []);
-                        const missingOrders = pendingOrders.filter(o => !enrolledOrderIds.has(o.id));
-
-                        if (missingOrders.length > 0) {
-                            console.log(`[MEMBER] Creating ${missingOrders.length} missing enrollments...`);
-                            const newEnrollments = missingOrders.map(o => ({
-                                user_id: userId,
-                                product_id: o.product_id,
-                                order_id: o.id,
-                                status: 'active'
-                            }));
-                            const { error: upsertErr } = await supabase.from('enrollments').upsert(newEnrollments);
-                            if (upsertErr) console.error('[MEMBER] Upsert failed:', upsertErr.message);
-                            else console.log('[MEMBER] Sync successful.');
-                        } else {
-                            console.log('[MEMBER] All paid orders already linked.');
+                            if (missingOrders.length > 0) {
+                                console.log(`[MEMBER-DEBUG] Syncing ${missingOrders.length} missing products...`);
+                                const newEnrollments = missingOrders.map(o => ({
+                                    user_id: userId,
+                                    product_id: o.product_id,
+                                    order_id: o.id,
+                                    status: 'active'
+                                }));
+                                await supabase.from('enrollments').upsert(newEnrollments);
+                            }
                         }
                     }
                 } catch (syncErr) {
-                    console.error('[MEMBER] Sync exception:', syncErr.message);
+                    console.error('[MEMBER-DEBUG] Sync exception:', syncErr.message);
                 }
             }
             // ------------------------

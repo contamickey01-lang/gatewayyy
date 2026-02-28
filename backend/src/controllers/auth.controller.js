@@ -46,46 +46,36 @@ class AuthController {
             // Find all paid orders for this email that don't have an enrollment yet
             try {
                 const normalizedEmail = email.toLowerCase().trim();
-                console.log(`[AUTH-DEBUG] Starting order search for normalized email: "${normalizedEmail}"`);
+                console.log(`[AUTH-DEBUG] Linking orders for: ${normalizedEmail}`);
 
-                const { data: allPaidOrders, error: fetchErr } = await supabase
+                const { data: relevantOrders, error: fetchErr } = await supabase
                     .from('orders')
-                    .select('id, product_id, buyer_email, status')
-                    .eq('status', 'paid');
+                    .select('id, product_id, buyer_email')
+                    .eq('status', 'paid')
+                    .ilike('buyer_email', normalizedEmail);
 
                 if (fetchErr) {
-                    console.error('[AUTH-DEBUG] Error fetching orders:', fetchErr.message);
+                    console.error('[AUTH-DEBUG] Fetch error:', fetchErr.message);
+                } else if (relevantOrders && relevantOrders.length > 0) {
+                    console.log(`[AUTH-DEBUG] Found ${relevantOrders.length} paid orders to link.`);
+                    const enrollments = relevantOrders.map(order => ({
+                        user_id: user.id,
+                        product_id: order.product_id,
+                        order_id: order.id,
+                        status: 'active'
+                    }));
+
+                    const { error: enrollError } = await supabase
+                        .from('enrollments')
+                        .upsert(enrollments);
+
+                    if (enrollError) console.error('[AUTH-DEBUG] Link error:', enrollError.message);
+                    else console.log('[AUTH-DEBUG] All orders linked to user successfully.');
                 } else {
-                    console.log(`[AUTH-DEBUG] Total paid orders found in DB: ${allPaidOrders?.length || 0}`);
-
-                    const relevantOrders = allPaidOrders?.filter(o => {
-                        const orderEmail = o.buyer_email?.toLowerCase().trim();
-                        const isMatch = orderEmail === normalizedEmail;
-                        if (isMatch) console.log(`[AUTH-DEBUG] MATCH FOUND: Order ${o.id} for product ${o.product_id}`);
-                        return isMatch;
-                    }) || [];
-
-                    if (relevantOrders.length > 0) {
-                        console.log(`[AUTH-DEBUG] Linking ${relevantOrders.length} orders to user ${user.id}`);
-                        const enrollments = relevantOrders.map(order => ({
-                            user_id: user.id,
-                            product_id: order.product_id,
-                            order_id: order.id,
-                            status: 'active'
-                        }));
-
-                        const { error: enrollError } = await supabase
-                            .from('enrollments')
-                            .upsert(enrollments);
-
-                        if (enrollError) console.error('[AUTH-DEBUG] Upsert failed:', enrollError.message);
-                        else console.log('[AUTH-DEBUG] Success: All orders linked.');
-                    } else {
-                        console.log(`[AUTH-DEBUG] No paid orders found matching "${normalizedEmail}".`);
-                    }
+                    console.log('[AUTH-DEBUG] No matching paid orders found during registration.');
                 }
             } catch (linkErr) {
-                console.error('[AUTH-DEBUG] Unexpected error during linking:', linkErr.message);
+                console.error('[AUTH-DEBUG] Critical linking error:', linkErr.message);
             }
             // ----------------------------
 
