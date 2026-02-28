@@ -130,11 +130,17 @@ export async function POST(req: NextRequest) {
             };
         }
 
-        if (payment_method === 'pix' && charge?.last_transaction) {
-            response.pix = {
-                qr_code: charge.last_transaction.qr_code,
-                qr_code_url: charge.last_transaction.qr_code_url
-            };
+        if (payment_method === 'pix') {
+            const lastTransaction = charge?.last_transaction;
+            const pixInfo = lastTransaction?.pix || lastTransaction || order.payments?.[0]?.pix;
+
+            if (pixInfo?.qr_code || pixInfo?.qr_code_url) {
+                response.pix = {
+                    qr_code: pixInfo.qr_code,
+                    qr_code_url: pixInfo.qr_code_url,
+                    expires_at: pixInfo.expires_at
+                };
+            }
         }
 
         return jsonSuccess(response, 201);

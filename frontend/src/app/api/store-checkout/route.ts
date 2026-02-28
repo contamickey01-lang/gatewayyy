@@ -122,22 +122,13 @@ export async function POST(req: Request) {
         // EXTREMTELY ROBUST PIX EXTRACTION
         let diagnosticPixError = null;
         if (method === 'pix') {
-            // Search in multiple possible locations
             const pixInfo = lastTransaction?.pix || lastTransaction || pagarmeOrder.payments?.[0]?.pix;
-
-            orderData.pix_qr_code = pixInfo?.qr_code || lastTransaction?.qr_code;
-            orderData.pix_qr_code_url = pixInfo?.qr_code_url || lastTransaction?.qr_code_url;
-            orderData.pix_expires_at = pixInfo?.expires_at || lastTransaction?.expires_at;
-
-            console.log('DIAGNOSTIC: Pix Data Found:', {
-                code: !!orderData.pix_qr_code,
-                url: !!orderData.pix_qr_code_url
-            });
+            orderData.pix_qr_code = pixInfo?.qr_code;
+            orderData.pix_qr_code_url = pixInfo?.qr_code_url;
+            orderData.pix_expires_at = pixInfo?.expires_at;
 
             if (!orderData.pix_qr_code) {
-                console.error('DIAGNOSTIC: Pix data missing. Dumping full Order object for deep analysis:');
-                console.error(JSON.stringify(pagarmeOrder, null, 2));
-                diagnosticPixError = "Pagar.me não retornou código Pix. Verifique se o vendedor aceita Pix.";
+                diagnosticPixError = "Pagar.me não retornou código Pix no checkout de loja.";
             }
         }
 
