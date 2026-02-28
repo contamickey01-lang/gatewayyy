@@ -20,7 +20,7 @@ export class PagarmeService {
             document: data.cpf_cnpj,
             type: data.type || 'individual',
             default_bank_account: {
-                holder_name: data.name,
+                holder_name: data.name.substring(0, 30),
                 holder_type: data.type || 'individual',
                 holder_document: data.cpf_cnpj,
                 bank: data.bank_code || '001',
@@ -288,7 +288,7 @@ export class PagarmeService {
             email: data.email,
             type: data.type || 'individual',
             default_bank_account: {
-                holder_name: data.name,
+                holder_name: data.name.substring(0, 30),
                 holder_type: data.type || 'individual',
                 holder_document: data.cpf_cnpj,
                 bank: data.bank_code,

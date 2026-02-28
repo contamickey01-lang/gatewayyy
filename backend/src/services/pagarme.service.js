@@ -13,7 +13,7 @@ class PagarmeService {
                 document: seller.cpf_cnpj?.replace(/[^\d]/g, ''),
                 type: seller.cpf_cnpj?.replace(/[^\d]/g, '').length > 11 ? 'company' : 'individual',
                 default_bank_account: {
-                    holder_name: seller.name,
+                    holder_name: seller.name?.substring(0, 30),
                     holder_type: seller.cpf_cnpj?.replace(/[^\d]/g, '').length > 11 ? 'company' : 'individual',
                     holder_document: seller.cpf_cnpj?.replace(/[^\d]/g, ''),
                     bank: seller.bank_name || '001',
