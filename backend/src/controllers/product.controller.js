@@ -163,6 +163,70 @@ class ProductController {
             next(error);
         }
     }
+
+    // Manual Delivery (Grant access to student)
+    async enrollUser(req, res, next) {
+        try {
+            const { id: productId } = req.params;
+            const { email } = req.body;
+            const sellerId = req.user.id;
+
+            // 1. Verify product ownership
+            const { data: product, error: productErr } = await supabase
+                .from('products')
+                .select('id, name')
+                .eq('id', productId)
+                .eq('user_id', sellerId)
+                .single();
+
+            if (productErr || !product) {
+                return res.status(403).json({ error: 'Você não tem permissão para gerenciar este produto.' });
+            }
+
+            // 2. Find or create user (Case-insensitive)
+            const normalizedEmail = email.toLowerCase().trim();
+            const { data: users } = await supabase.from('users').select('id, email');
+            let user = users?.find(u => u.email?.toLowerCase().trim() === normalizedEmail);
+
+            if (!user) {
+                console.log(`[MANUAL-ENROLL] Creating shadow user for: ${normalizedEmail}`);
+                const { data: newUser, error: createError } = await supabase
+                    .from('users')
+                    .insert({
+                        name: 'Estudante (Manual)',
+                        email: normalizedEmail,
+                        password_hash: 'MANUAL_ENROLLMENT_PENDING_SET',
+                        role: 'customer',
+                        status: 'active'
+                    })
+                    .select()
+                    .single();
+
+                if (createError) throw createError;
+                user = newUser;
+            }
+
+            // 3. Create enrollment
+            const { error: enrollError } = await supabase
+                .from('enrollments')
+                .upsert({
+                    user_id: user.id,
+                    product_id: productId,
+                    status: 'active'
+                });
+
+            if (enrollError) throw enrollError;
+
+            console.log(`[MANUAL-ENROLL] Seller ${sellerId} granted access to ${normalizedEmail} for product ${productId}`);
+
+            res.json({
+                message: `Acesso ao produto "${product.name}" concedido com sucesso para ${normalizedEmail}!`,
+                user_id: user.id
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
 }
 
 module.exports = new ProductController();

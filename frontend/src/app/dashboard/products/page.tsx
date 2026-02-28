@@ -5,13 +5,17 @@ import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { productsAPI } from '@/lib/api';
 import toast from 'react-hot-toast';
-import { FiPlus, FiEdit2, FiTrash2, FiCopy, FiPackage, FiX, FiUpload, FiImage, FiBook, FiSettings } from 'react-icons/fi';
+import { FiPlus, FiEdit2, FiTrash2, FiCopy, FiPackage, FiX, FiUpload, FiImage, FiBook, FiSettings, FiSend } from 'react-icons/fi';
 import axios from 'axios';
 
 export default function ProductsPage() {
     const [products, setProducts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
+    const [showEnrollModal, setShowEnrollModal] = useState(false);
+    const [enrollEmail, setEnrollEmail] = useState('');
+    const [enrollLoading, setEnrollLoading] = useState(false);
+    const [selectedProductForEnroll, setSelectedProductForEnroll] = useState<any>(null);
     const [editing, setEditing] = useState<any>(null);
     const [form, setForm] = useState({
         name: '', description: '', price: '', image_url: '', type: 'digital', status: 'active'
@@ -128,6 +132,28 @@ export default function ProductsPage() {
         toast.success('Link copiado!');
     };
 
+    const openEnroll = (product: any) => {
+        setSelectedProductForEnroll(product);
+        setEnrollEmail('');
+        setShowEnrollModal(true);
+    };
+
+    const handleEnroll = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedProductForEnroll || !enrollEmail) return;
+
+        setEnrollLoading(true);
+        try {
+            const { data } = await productsAPI.enroll(selectedProductForEnroll.id, enrollEmail);
+            toast.success(data.message || 'Acesso liberado!');
+            setShowEnrollModal(false);
+        } catch (err: any) {
+            toast.error(err.response?.data?.error || 'Erro ao liberar acesso');
+        } finally {
+            setEnrollLoading(false);
+        }
+    };
+
     const update = (field: string, value: string) => setForm({ ...form, [field]: value });
 
     if (loading) {
@@ -204,6 +230,9 @@ export default function ProductsPage() {
                                         <FiTrash2 size={14} />
                                     </button>
                                 </div>
+                                <button onClick={() => openEnroll(product)} className="btn-primary" style={{ width: '100%', marginTop: 8, padding: '8px 12px', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                                    <FiSend size={13} /> Entregar Produto
+                                </button>
                             </div>
                         </div>
                     ))}
@@ -300,6 +329,47 @@ export default function ProductsPage() {
 
                             <button type="submit" className="btn-primary" disabled={uploading} style={{ width: '100%' }}>
                                 {uploading ? 'Salvando...' : (editing ? 'Salvar Alterações' : 'Criar Produto')}
+                            </button>
+                        </form>
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {/* Manual Delivery Modal */}
+            {showEnrollModal && createPortal(
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                    <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: 400, padding: 32 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24 }}>
+                            <div>
+                                <h3 style={{ fontSize: 18, fontWeight: 700 }}>Entregar Produto</h3>
+                                <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>
+                                    Liberar acesso ao produto <strong>{selectedProductForEnroll?.name}</strong>
+                                </p>
+                            </div>
+                            <button type="button" onClick={() => setShowEnrollModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                                <FiX size={20} />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleEnroll}>
+                            <div style={{ marginBottom: 24 }}>
+                                <label style={{ display: 'block', fontSize: 13, color: 'var(--text-secondary)', marginBottom: 8 }}>E-mail do aluno</label>
+                                <input
+                                    type="email"
+                                    className="input-field"
+                                    placeholder="exemplo@gmail.com"
+                                    required
+                                    value={enrollEmail}
+                                    onChange={e => setEnrollEmail(e.target.value)}
+                                />
+                                <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
+                                    O produto aparecerá instantaneamente na Área de Membros deste usuário.
+                                </p>
+                            </div>
+
+                            <button type="submit" className="btn-primary" disabled={enrollLoading} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                                {enrollLoading ? 'Processando...' : <><FiSend size={14} /> Liberar Acesso</>}
                             </button>
                         </form>
                     </div>

@@ -29,4 +29,10 @@ router.put('/:id', [
 
 router.delete('/:id', productController.delete);
 
+// Manual Delivery (Grant access to student)
+router.post('/:id/enroll', [
+    body('email').isEmail().withMessage('E-mail inválido'),
+    validate
+], productController.enrollUser);
+
 module.exports = router;

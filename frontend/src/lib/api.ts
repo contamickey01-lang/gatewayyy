@@ -51,6 +51,7 @@ export const productsAPI = {
     update: (id: string, data: any) => api.put(`/products/${id}`, data),
     delete: (id: string) => api.delete(`/products/${id}`),
     updateCheckoutSettings: (id: string, settings: any) => api.put(`/products/${id}`, { checkout_settings: settings }),
+    enroll: (id: string, email: string) => api.post(`/products/${id}/enroll`, { email }),
 };
 
 // Dashboard
