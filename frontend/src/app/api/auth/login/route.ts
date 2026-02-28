@@ -15,16 +15,49 @@ export async function POST(req: NextRequest) {
         const { data: user } = await supabase
             .from('users')
             .select('*')
-            .eq('email', email)
+            .ilike('email', email.toLowerCase().trim())
             .single();
 
         if (!user) return jsonError('Credenciais inválidas', 401);
         if (user.status === 'blocked') return jsonError('Conta bloqueada', 403);
 
-        const validPassword = await comparePassword(password, user.password);
+        const passwordHash = user.password_hash || user.password;
+        if (!passwordHash) return jsonError('Credenciais inválidas', 401);
+
+        const validPassword = await comparePassword(password, passwordHash);
         if (!validPassword) return jsonError('Credenciais inválidas', 401);
 
         const token = generateToken({ userId: user.id, role: user.role });
+
+        const normalizedEmail = (user.email || '').toLowerCase().trim();
+        if (normalizedEmail) {
+            const { data: paidOrders } = await supabase
+                .from('orders')
+                .select(`
+                    id,
+                    product_id,
+                    products (
+                        type
+                    )
+                `)
+                .eq('status', 'paid')
+                .ilike('buyer_email', normalizedEmail);
+
+            const enrollmentsToUpsert = (paidOrders || [])
+                .filter((o: any) => o?.product_id && o?.products?.type === 'digital')
+                .map((o: any) => ({
+                    user_id: user.id,
+                    product_id: o.product_id,
+                    order_id: o.id,
+                    status: 'active'
+                }));
+
+            if (enrollmentsToUpsert.length > 0) {
+                await supabase
+                    .from('enrollments')
+                    .upsert(enrollmentsToUpsert, { onConflict: 'user_id, product_id' });
+            }
+        }
 
         return jsonSuccess({
             token,

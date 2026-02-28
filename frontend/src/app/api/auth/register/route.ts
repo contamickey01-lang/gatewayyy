@@ -15,11 +15,13 @@ export async function POST(req: NextRequest) {
             return jsonError('Nome, email, senha e CPF/CNPJ são obrigatórios');
         }
 
+        const normalizedEmail = email.toLowerCase().trim();
+
         // Check if user exists
         const { data: existingUser } = await supabase
             .from('users')
             .select('id')
-            .eq('email', email)
+            .ilike('email', normalizedEmail)
             .single();
 
         if (existingUser) {
@@ -34,7 +36,7 @@ export async function POST(req: NextRequest) {
 
         // Create user
         const { data: user, error } = await supabase.from('users').insert({
-            id: userId, name, email, password: hashedPassword,
+            id: userId, name, email: normalizedEmail, password_hash: hashedPassword,
             cpf_cnpj, phone, role: 'seller', status: 'active'
         }).select().single();
 
@@ -50,11 +52,38 @@ export async function POST(req: NextRequest) {
             });
         }
 
+        const { data: paidOrders } = await supabase
+            .from('orders')
+            .select(`
+                id,
+                product_id,
+                products (
+                    type
+                )
+            `)
+            .eq('status', 'paid')
+            .ilike('buyer_email', normalizedEmail);
+
+        const enrollmentsToUpsert = (paidOrders || [])
+            .filter((o: any) => o?.product_id && o?.products?.type === 'digital')
+            .map((o: any) => ({
+                user_id: userId,
+                product_id: o.product_id,
+                order_id: o.id,
+                status: 'active'
+            }));
+
+        if (enrollmentsToUpsert.length > 0) {
+            await supabase
+                .from('enrollments')
+                .upsert(enrollmentsToUpsert, { onConflict: 'user_id, product_id' });
+        }
+
         const token = generateToken({ userId: userId, role: 'seller' });
 
         return jsonSuccess({
             token,
-            user: { id: userId, name, email, role: 'seller' }
+            user: { id: userId, name, email: normalizedEmail, role: 'seller' }
         }, 201);
     } catch (err: any) {
         console.error('Register error:', err);

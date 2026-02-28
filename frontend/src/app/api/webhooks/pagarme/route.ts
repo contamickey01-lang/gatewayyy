@@ -13,7 +13,6 @@ export async function POST(req: NextRequest) {
         if (!type || !data) return jsonError('Invalid webhook', 400);
 
         const chargeId = data.id;
-        const status = data.status;
 
         // Find order by charge id
         const { data: order } = await supabase
@@ -82,7 +81,6 @@ export async function POST(req: NextRequest) {
             // Get platform fee percentage
             const feePercentage = parseFloat(process.env.PLATFORM_FEE_PERCENTAGE || '3');
             const feeAmount = Math.round(order.amount * (feePercentage / 100));
-            const sellerAmount = order.amount - feeAmount;
 
             // Update original 'sale' transaction to confirmed and adjust to net amount
             // Or keep it as full amount and create a separate 'fee' transaction (matches frontend stats logic)
@@ -114,38 +112,17 @@ export async function POST(req: NextRequest) {
                         .update({ sales_count: (product.sales_count || 0) + 1 })
                         .eq('id', order.product_id);
 
-                    // DIGITAL PRODUCT AUTO-ENROLLMENT
-                    if (product.type === 'digital') {
-                        // 1. Get or Create User
-                        let studentId = order.customer_id; // Default if buyer is logged in
+                    if (product.type === 'digital' && order.buyer_email) {
+                        const normalizedEmail = order.buyer_email.toLowerCase().trim();
+                        const { data: existingUser } = await supabase
+                            .from('users')
+                            .select('id, email')
+                            .ilike('email', normalizedEmail)
+                            .single();
 
-                        // If order has an email (guest or specific customer email)
-                        const customerEmail = order.customer_email;
-                        if (customerEmail) {
-                            const { data: existingUser } = await supabase
-                                .from('users').select('id').eq('email', customerEmail.toLowerCase()).single();
-
-                            if (existingUser) {
-                                studentId = existingUser.id;
-                            } else {
-                                // Create shadow user
-                                const newUserId = uuidv4();
-                                const { error: userError } = await supabase.from('users').insert({
-                                    id: newUserId,
-                                    email: customerEmail.toLowerCase(),
-                                    name: order.customer_name || 'Estudante',
-                                    role: 'customer',
-                                    // Set a flag that password needs setting
-                                    password_hash: 'INITIAL_PAYMENT_PENDING_SET'
-                                });
-                                if (!userError) studentId = newUserId;
-                            }
-                        }
-
-                        // 2. Create Enrollment
-                        if (studentId) {
+                        if (existingUser) {
                             await supabase.from('enrollments').upsert({
-                                user_id: studentId,
+                                user_id: existingUser.id,
                                 product_id: order.product_id,
                                 order_id: order.id,
                                 status: 'active'
