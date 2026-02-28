@@ -45,8 +45,14 @@ export default function SettingsPage() {
     const handleSave = async () => {
         setSaving(true);
         try {
-            await authAPI.updateProfile(form);
-            toast.success('Perfil atualizado!');
+            const { data } = await authAPI.updateProfile(form);
+
+            if (data.syncError) {
+                const details = data.syncError.details?.map((d: any) => d.message).join(', ') || '';
+                toast.error(`Perfil salvo, mas erro no Pagar.me: ${data.syncError.message} ${details}`, { duration: 6000 });
+            } else {
+                toast.success('Perfil e sincronização atualizados!');
+            }
         } catch (err: any) {
             toast.error(err.response?.data?.error || 'Erro ao salvar');
         } finally { setSaving(false); }

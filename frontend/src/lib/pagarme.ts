@@ -28,6 +28,14 @@ export class PagarmeService {
                 account_number: data.account || '0000000',
                 account_check_digit: data.account_digit || '0',
                 type: data.account_type || 'checking'
+            },
+            transfer_settings: {
+                transfer_enabled: true,
+                transfer_interval: 'daily',
+                transfer_day: 0
+            },
+            automatic_anticipation_settings: {
+                enabled: false
             }
         });
         return response.data;

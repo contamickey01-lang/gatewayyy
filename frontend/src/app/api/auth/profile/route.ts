@@ -175,13 +175,15 @@ export async function PUT(req: NextRequest) {
             } catch (pError: any) {
                 const errorData = pError.response?.data;
                 const errorDetail = errorData?.message || pError.message;
-                const validationErrors = errorData?.errors ? JSON.stringify(errorData.errors) : '';
 
                 console.error('[AUTH API] Pagar.me sync error:', JSON.stringify(errorData || pError.message, null, 2));
 
                 return jsonSuccess({
                     user,
-                    message: `Perfil salvo, mas houve um erro ao sincronizar com o Pagar.me: ${errorDetail}. ${validationErrors}`.substring(0, 200)
+                    syncError: {
+                        message: errorDetail,
+                        details: errorData?.errors || []
+                    }
                 });
             }
         }
