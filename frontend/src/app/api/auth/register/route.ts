@@ -29,17 +29,8 @@ export async function POST(req: NextRequest) {
         const hashedPassword = await hashPassword(password);
         const userId = uuidv4();
 
-        // Create Pagar.me recipient
-        let pagarmeRecipientId = null;
-        try {
-            const recipient = await PagarmeService.createRecipient({
-                name, email, cpf_cnpj,
-                type: cpf_cnpj.replace(/\D/g, '').length > 11 ? 'company' : 'individual'
-            });
-            pagarmeRecipientId = recipient.id;
-        } catch (err: any) {
-            console.error('Pagar.me recipient creation failed:', err.response?.data || err.message);
-        }
+        // Defer Pagar.me recipient creation until profile update with real bank data
+        const pagarmeRecipientId = null;
 
         // Create user
         const { data: user, error } = await supabase.from('users').insert({

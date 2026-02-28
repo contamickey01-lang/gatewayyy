@@ -106,7 +106,7 @@ export async function PUT(req: NextRequest) {
         }));
 
         // Sync with Pagar.me if bank details are provided
-        if (body.bank_name && body.bank_agency && body.bank_account) {
+        if ((body.bank_name || body.bank_account) && user.cpf_cnpj) {
             try {
                 const { data: recipients } = await supabase
                     .from('recipients')
@@ -135,27 +135,28 @@ export async function PUT(req: NextRequest) {
                 const cleanAgency = body.bank_agency?.replace(/\D/g, '');
                 const cleanAccount = body.bank_account?.replace(/\D/g, '');
 
-                if (!user.cpf_cnpj) {
-                    return jsonError('É necessário salvar seu CPF/CNPJ antes de configurar os dados bancários');
-                }
-
                 const recipientData = {
                     name: user.name,
                     email: user.email,
                     cpf_cnpj: newDoc,
                     type: newDoc.length > 11 ? 'company' : 'individual',
                     bank_code: cleanBankCode || '001',
-                    agency: cleanAgency,
+                    agency: cleanAgency || '0001',
                     account: cleanAccount,
                     account_digit: body.bank_account_digit || '0',
                     account_type: body.bank_account_type || 'checking'
                 };
 
+                console.log(`[AUTH API] Syncing Recipient Data:`, JSON.stringify(recipientData));
+
                 const isTestRecipient = existingRecipient?.pagarme_recipient_id?.startsWith('re_test_');
 
-                if (existingRecipient && !documentChanged && !isTestRecipient) {
+                if (existingRecipient?.pagarme_recipient_id && !documentChanged && !isTestRecipient) {
+                    // Update existing
                     await PagarmeService.updateRecipient(existingRecipient.pagarme_recipient_id, recipientData);
+                    await supabase.from('recipients').update({ status: 'active' }).eq('user_id', auth.user.id);
                 } else {
+                    // Create new
                     const pRecipient = await PagarmeService.createRecipient(recipientData);
                     if (existingRecipient) {
                         await supabase
@@ -172,10 +173,16 @@ export async function PUT(req: NextRequest) {
                     }
                 }
             } catch (pError: any) {
-                const errorDetail = pError.response?.data?.message || pError.message;
-                console.error('[AUTH API] Pagar.me sync error:', JSON.stringify(pError.response?.data || pError.message, null, 2));
-                // We return success for profile even if Pagarme fails, but with message
-                return jsonSuccess({ user, message: 'Perfil salvo, mas erro ao sincronizar Pagar.me: ' + errorDetail });
+                const errorData = pError.response?.data;
+                const errorDetail = errorData?.message || pError.message;
+                const validationErrors = errorData?.errors ? JSON.stringify(errorData.errors) : '';
+
+                console.error('[AUTH API] Pagar.me sync error:', JSON.stringify(errorData || pError.message, null, 2));
+
+                return jsonSuccess({
+                    user,
+                    message: `Perfil salvo, mas houve um erro ao sincronizar com o Pagar.me: ${errorDetail}. ${validationErrors}`.substring(0, 200)
+                });
             }
         }
 

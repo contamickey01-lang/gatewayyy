@@ -73,33 +73,42 @@ class PagarmeService {
                 payments: []
             };
 
-            // Add split rules ONLY if both IDs exist
-            if (platformRecipientId && sellerRecipientId && feePercentage > 0) {
-                orderData.split = [
-                    {
-                        amount: sellerPercentage,
-                        recipient_id: sellerRecipientId,
-                        type: 'percentage',
-                        options: { charge_processing_fee: true, liable: true }
-                    },
-                    {
-                        amount: feePercentage,
-                        recipient_id: platformRecipientId,
-                        type: 'percentage',
-                        options: { charge_processing_fee: false, liable: false }
-                    }
-                ];
-            }
+            // Setup split rules ONLY if both IDs exist
+            const shouldSplit = platformRecipientId && sellerRecipientId && feePercentage > 0 && platformRecipientId !== sellerRecipientId;
+            const splitRules = shouldSplit ? [
+                {
+                    amount: sellerPercentage,
+                    recipient_id: sellerRecipientId,
+                    type: 'percentage',
+                    options: { charge_processing_fee: true, liable: true }
+                },
+                {
+                    amount: feePercentage,
+                    recipient_id: platformRecipientId,
+                    type: 'percentage',
+                    options: { charge_processing_fee: false, liable: false }
+                }
+            ] : undefined;
+
+            console.log('[BACKEND PAGARME] MultiItem Split:', {
+                shouldSplit,
+                platformRecipientId,
+                sellerRecipientId,
+                feePercentage,
+                sellerPercentage
+            });
 
             // Add payment method
             if (paymentMethod === 'pix') {
                 orderData.payments.push({
                     payment_method: 'pix',
+                    split: splitRules,
                     pix: { expires_in: 86400 }
                 });
             } else if (paymentMethod === 'credit_card') {
                 orderData.payments.push({
                     payment_method: 'credit_card',
+                    split: splitRules,
                     credit_card: {
                         installments: cardData?.installments || 1,
                         card: {
@@ -159,33 +168,42 @@ class PagarmeService {
                 payments: []
             };
 
-            // Add split rules ONLY if both IDs exist
-            if (platformRecipientId && sellerRecipientId && feePercentage > 0) {
-                orderData.split = [
-                    {
-                        amount: sellerPercentage,
-                        recipient_id: sellerRecipientId,
-                        type: 'percentage',
-                        options: { charge_processing_fee: true, liable: true }
-                    },
-                    {
-                        amount: feePercentage,
-                        recipient_id: platformRecipientId,
-                        type: 'percentage',
-                        options: { charge_processing_fee: false, liable: false }
-                    }
-                ];
-            }
+            // Setup split rules ONLY if both IDs exist
+            const shouldSplit = platformRecipientId && sellerRecipientId && feePercentage > 0 && platformRecipientId !== sellerRecipientId;
+            const splitRules = shouldSplit ? [
+                {
+                    amount: sellerPercentage,
+                    recipient_id: sellerRecipientId,
+                    type: 'percentage',
+                    options: { charge_processing_fee: true, liable: true }
+                },
+                {
+                    amount: feePercentage,
+                    recipient_id: platformRecipientId,
+                    type: 'percentage',
+                    options: { charge_processing_fee: false, liable: false }
+                }
+            ] : undefined;
+
+            console.log('[BACKEND PAGARME] SingleOrder Split:', {
+                shouldSplit,
+                platformRecipientId,
+                sellerRecipientId,
+                feePercentage,
+                sellerPercentage
+            });
 
             // Add payment method
             if (paymentMethod === 'pix') {
                 orderData.payments.push({
                     payment_method: 'pix',
+                    split: splitRules,
                     pix: { expires_in: 3600 }
                 });
             } else if (paymentMethod === 'credit_card') {
                 orderData.payments.push({
                     payment_method: 'credit_card',
+                    split: splitRules,
                     credit_card: {
                         installments: cardData?.installments || 1,
                         card: {

@@ -75,33 +75,37 @@ export class PagarmeService {
             payments: []
         };
 
-        // Add split rules at root level
         const platId = (process.env.PLATFORM_RECIPIENT_ID || '').trim();
         const sellId = (data.seller_recipient_id || '').trim();
         const fee = data.platform_fee_percentage || 0;
 
-        const shouldSplit = platId && sellId && fee > 0 && platId.toLowerCase() !== sellId.toLowerCase();
+        console.log('[PAGARME SERVICE] Split Config:', {
+            platId,
+            sellId,
+            fee,
+            sellerPercentage
+        });
 
-        if (shouldSplit) {
-            orderData.split = [
-                {
-                    amount: sellerPercentage,
-                    recipient_id: sellId,
-                    type: 'percentage',
-                    options: { charge_processing_fee: true, liable: true }
-                },
-                {
-                    amount: fee,
-                    recipient_id: platId,
-                    type: 'percentage',
-                    options: { charge_processing_fee: false, liable: false }
-                }
-            ];
-        }
+        const shouldSplit = !!(platId && sellId && fee > 0 && platId.toLowerCase() !== sellId.toLowerCase());
+        const splitRules = shouldSplit ? [
+            {
+                amount: sellerPercentage,
+                recipient_id: sellId,
+                type: 'percentage',
+                options: { charge_processing_fee: true, liable: true }
+            },
+            {
+                amount: fee,
+                recipient_id: platId,
+                type: 'percentage',
+                options: { charge_processing_fee: false, liable: false }
+            }
+        ] : undefined;
 
         if (data.payment_method === 'pix') {
             orderData.payments.push({
                 payment_method: 'pix',
+                split: splitRules,
                 pix: {
                     expires_in: 3600,
                     additional_information: [{ name: 'Plataforma', value: process.env.PLATFORM_NAME || 'PayGateway' }]
@@ -117,6 +121,7 @@ export class PagarmeService {
 
             orderData.payments.push({
                 payment_method: 'credit_card',
+                split: splitRules,
                 credit_card: {
                     installments: installments,
                     statement_descriptor: 'PEDIDO',
@@ -188,28 +193,33 @@ export class PagarmeService {
         const sellId = (data.seller_recipient_id || '').trim();
         const fee = data.platform_fee_percentage || 0;
 
-        const shouldSplit = platId && sellId && fee > 0 && platId.toLowerCase() !== sellId.toLowerCase();
+        console.log('[PAGARME SERVICE] MultiItem Split Config:', {
+            platId,
+            sellId,
+            fee,
+            sellerPercentage
+        });
 
-        if (shouldSplit) {
-            orderData.split = [
-                {
-                    amount: sellerPercentage,
-                    recipient_id: sellId,
-                    type: 'percentage',
-                    options: { charge_processing_fee: true, liable: true }
-                },
-                {
-                    amount: fee,
-                    recipient_id: platId,
-                    type: 'percentage',
-                    options: { charge_processing_fee: false, liable: false }
-                }
-            ];
-        }
+        const shouldSplit = !!(platId && sellId && fee > 0 && platId.toLowerCase() !== sellId.toLowerCase());
+        const splitRules = shouldSplit ? [
+            {
+                amount: sellerPercentage,
+                recipient_id: sellId,
+                type: 'percentage',
+                options: { charge_processing_fee: true, liable: true }
+            },
+            {
+                amount: fee,
+                recipient_id: platId,
+                type: 'percentage',
+                options: { charge_processing_fee: false, liable: false }
+            }
+        ] : undefined;
 
         if (data.payment_method === 'pix') {
             orderData.payments.push({
                 payment_method: 'pix',
+                split: splitRules,
                 pix: { expires_in: 3600 }
             });
         } else if (data.payment_method === 'credit_card' || data.payment_method === 'card') {
@@ -222,6 +232,7 @@ export class PagarmeService {
 
             orderData.payments.push({
                 payment_method: 'credit_card',
+                split: splitRules,
                 credit_card: {
                     installments: installments,
                     statement_descriptor: 'LOJA',
