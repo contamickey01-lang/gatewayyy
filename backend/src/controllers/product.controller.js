@@ -183,10 +183,17 @@ class ProductController {
                 return res.status(403).json({ error: 'Você não tem permissão para gerenciar este produto.' });
             }
 
-            // 2. Find or create user (Case-insensitive)
+            // 2. Find user (Case-insensitive direct query)
             const normalizedEmail = email.toLowerCase().trim();
-            const { data: users } = await supabase.from('users').select('id, email');
-            let user = users?.find(u => u.email?.toLowerCase().trim() === normalizedEmail);
+            console.log(`[MANUAL-ENROLL] Searching for student: ${normalizedEmail}`);
+
+            const { data: existingUsers, error: searchErr } = await supabase
+                .from('users')
+                .select('id, email')
+                .ilike('email', normalizedEmail);
+
+            if (searchErr) throw searchErr;
+            let user = existingUsers && existingUsers.length > 0 ? existingUsers[0] : null;
 
             if (!user) {
                 console.log(`[MANUAL-ENROLL] Creating shadow user for: ${normalizedEmail}`);
@@ -206,13 +213,15 @@ class ProductController {
                 user = newUser;
             }
 
-            // 3. Create enrollment
+            // 3. Create or Update enrollment (Using onConflict for user_id/product_id uniqueness)
             const { error: enrollError } = await supabase
                 .from('enrollments')
                 .upsert({
                     user_id: user.id,
                     product_id: productId,
                     status: 'active'
+                }, {
+                    onConflict: 'user_id, product_id'
                 });
 
             if (enrollError) throw enrollError;
